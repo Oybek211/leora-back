@@ -1,0 +1,20 @@
+app:
+  name: leora-backend
+  env: local
+  port: 9090
+  basePath: /api/v1
+  jwtSecret: changeme
+  jwtAccessTTL: 168h
+  jwtRefreshTTL: 24h
+
+database:
+  host: postgres
+  port: 5432
+  user: leora
+  password: leora
+  name: leora_dev
+
+redis:
+  addr: redis:6379
+  password: ""
+  db: 0

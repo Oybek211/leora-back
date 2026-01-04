@@ -1,0 +1,799 @@
+{
+  "info": {
+    "name": "Leora API v4 - Tested & Working",
+    "description": "To'liq test qilingan va ishlaydigan Postman collection. Auth, Tasks, Goals, Habits, Focus Sessions, Finance, Notifications.",
+    "version": "4.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:9090/api/v1", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "taskId", "value": "", "type": "string" },
+    { "key": "goalId", "value": "", "type": "string" },
+    { "key": "habitId", "value": "", "type": "string" },
+    { "key": "focusSessionId", "value": "", "type": "string" },
+    { "key": "accountId", "value": "", "type": "string" },
+    { "key": "transactionId", "value": "", "type": "string" },
+    { "key": "budgetId", "value": "", "type": "string" },
+    { "key": "debtId", "value": "", "type": "string" },
+    { "key": "notificationId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "description": "Authentication endpoints - register, login, forgot-password, reset-password, refresh, logout, me",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                "  pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                "  pm.collectionVariables.set('userId', json.data.user.id);",
+                "  pm.test('Registration successful', () => pm.response.to.have.status(200));",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@leora.uz\",\n  \"fullName\": \"Test User\",\n  \"password\": \"Test123456!\",\n  \"confirmPassword\": \"Test123456!\",\n  \"region\": \"uzbekistan\",\n  \"currency\": \"UZS\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                "  pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                "  pm.collectionVariables.set('userId', json.data.user.id);",
+                "  pm.test('Login successful', () => pm.response.to.have.status(200));",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailOrUsername\": \"test@leora.uz\",\n  \"password\": \"Test123456!\",\n  \"rememberMe\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@leora.uz\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["auth", "forgot-password"] }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@leora.uz\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewSecurePass123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["auth", "reset-password"] }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                "  pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Tasks",
+      "description": "Task management with checklist and dependencies",
+      "item": [
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/tasks", "host": ["{{baseUrl}}"], "path": ["tasks"] }
+          }
+        },
+        {
+          "name": "Create Task",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('taskId', json.data.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test Task\",\n  \"status\": \"inbox\",\n  \"priority\": \"medium\",\n  \"notes\": \"Test note\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks", "host": ["{{baseUrl}}"], "path": ["tasks"] }
+          }
+        },
+        {
+          "name": "Get Task by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"] }
+          }
+        },
+        {
+          "name": "Update Task (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"] }
+          }
+        },
+        {
+          "name": "Complete Task",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}/complete", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}", "complete"] }
+          }
+        },
+        {
+          "name": "Reopen Task",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}/reopen", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}", "reopen"] }
+          }
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Goals",
+      "description": "Goal tracking with milestones and check-ins",
+      "item": [
+        {
+          "name": "List Goals",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/goals", "host": ["{{baseUrl}}"], "path": ["goals"] }
+          }
+        },
+        {
+          "name": "Create Goal",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('goalId', json.data.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Learn Go Programming\",\n  \"description\": \"Master Go for backend development\",\n  \"goalType\": \"education\",\n  \"status\": \"active\",\n  \"metricType\": \"count\",\n  \"direction\": \"increase\",\n  \"unit\": \"hours\",\n  \"targetValue\": 100,\n  \"currentValue\": 0\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/goals", "host": ["{{baseUrl}}"], "path": ["goals"] }
+          }
+        },
+        {
+          "name": "Get Goal by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/goals/{{goalId}}", "host": ["{{baseUrl}}"], "path": ["goals", "{{goalId}}"] }
+          }
+        },
+        {
+          "name": "Update Goal Progress",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentValue\": 25,\n  \"progressPercent\": 25\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/goals/{{goalId}}", "host": ["{{baseUrl}}"], "path": ["goals", "{{goalId}}"] }
+          }
+        },
+        {
+          "name": "Delete Goal",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/goals/{{goalId}}", "host": ["{{baseUrl}}"], "path": ["goals", "{{goalId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Habits",
+      "description": "Habit tracking with completions, history and stats",
+      "item": [
+        {
+          "name": "List Habits",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/habits", "host": ["{{baseUrl}}"], "path": ["habits"] }
+          }
+        },
+        {
+          "name": "Create Habit",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('habitId', json.data.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Morning Exercise\",\n  \"description\": \"30 minutes workout every morning\",\n  \"habitType\": \"health\",\n  \"status\": \"active\",\n  \"frequency\": \"daily\",\n  \"completionMode\": \"boolean\",\n  \"countingType\": \"create\",\n  \"difficulty\": \"medium\",\n  \"priority\": \"high\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/habits", "host": ["{{baseUrl}}"], "path": ["habits"] }
+          }
+        },
+        {
+          "name": "Get Habit by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/habits/{{habitId}}", "host": ["{{baseUrl}}"], "path": ["habits", "{{habitId}}"] }
+          }
+        },
+        {
+          "name": "Complete Habit",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dateKey\": \"2026-01-04\",\n  \"status\": \"done\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/habits/{{habitId}}/complete", "host": ["{{baseUrl}}"], "path": ["habits", "{{habitId}}", "complete"] }
+          }
+        },
+        {
+          "name": "Get Habit History",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/habits/{{habitId}}/history", "host": ["{{baseUrl}}"], "path": ["habits", "{{habitId}}", "history"] }
+          }
+        },
+        {
+          "name": "Get Habit Stats",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/habits/{{habitId}}/stats", "host": ["{{baseUrl}}"], "path": ["habits", "{{habitId}}", "stats"] }
+          }
+        },
+        {
+          "name": "Delete Habit",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/habits/{{habitId}}", "host": ["{{baseUrl}}"], "path": ["habits", "{{habitId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Focus Sessions",
+      "description": "Pomodoro-style focus sessions with pause/resume/complete/cancel/interrupt",
+      "item": [
+        {
+          "name": "List Focus Sessions",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/focus-sessions", "host": ["{{baseUrl}}"], "path": ["focus-sessions"] }
+          }
+        },
+        {
+          "name": "Start Focus Session",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('focusSessionId', json.data.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plannedMinutes\": 25\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/focus-sessions/start", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "start"] }
+          }
+        },
+        {
+          "name": "Start Focus Session (with Task)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskId\": \"{{taskId}}\",\n  \"plannedMinutes\": 25\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/focus-sessions/start", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "start"] }
+          }
+        },
+        {
+          "name": "Start Focus Session (with Goal)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"goalId\": \"{{goalId}}\",\n  \"plannedMinutes\": 50\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/focus-sessions/start", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "start"] }
+          }
+        },
+        {
+          "name": "Get Focus Session by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/focus-sessions/{{focusSessionId}}", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "{{focusSessionId}}"] }
+          }
+        },
+        {
+          "name": "Pause Session",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/focus-sessions/{{focusSessionId}}/pause", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "{{focusSessionId}}", "pause"] }
+          }
+        },
+        {
+          "name": "Resume Session",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/focus-sessions/{{focusSessionId}}/resume", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "{{focusSessionId}}", "resume"] }
+          }
+        },
+        {
+          "name": "Add Interruption",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/focus-sessions/{{focusSessionId}}/interrupt", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "{{focusSessionId}}", "interrupt"] }
+          }
+        },
+        {
+          "name": "Complete Session",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actualMinutes\": 25,\n  \"notes\": \"Productive session!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/focus-sessions/{{focusSessionId}}/complete", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "{{focusSessionId}}", "complete"] }
+          }
+        },
+        {
+          "name": "Cancel Session",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/focus-sessions/{{focusSessionId}}/cancel", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "{{focusSessionId}}", "cancel"] }
+          }
+        },
+        {
+          "name": "Get Focus Stats",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/focus-sessions/stats", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "stats"] }
+          }
+        },
+        {
+          "name": "Delete Focus Session",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/focus-sessions/{{focusSessionId}}", "host": ["{{baseUrl}}"], "path": ["focus-sessions", "{{focusSessionId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Finance - Accounts",
+      "description": "Account management",
+      "item": [
+        {
+          "name": "List Accounts",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/accounts", "host": ["{{baseUrl}}"], "path": ["accounts"] }
+          }
+        },
+        {
+          "name": "Create Account",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('accountId', json.data.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cash Wallet\",\n  \"currency\": \"UZS\",\n  \"type\": \"cash\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/accounts", "host": ["{{baseUrl}}"], "path": ["accounts"] }
+          }
+        },
+        {
+          "name": "Get Account by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/accounts/{{accountId}}", "host": ["{{baseUrl}}"], "path": ["accounts", "{{accountId}}"] }
+          }
+        },
+        {
+          "name": "Update Account",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Wallet\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/accounts/{{accountId}}", "host": ["{{baseUrl}}"], "path": ["accounts", "{{accountId}}"] }
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/accounts/{{accountId}}", "host": ["{{baseUrl}}"], "path": ["accounts", "{{accountId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Finance - Transactions",
+      "description": "Transaction management",
+      "item": [
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] }
+          }
+        },
+        {
+          "name": "Create Transaction",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('transactionId', json.data.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountId\": \"{{accountId}}\",\n  \"amount\": 50000,\n  \"currency\": \"UZS\",\n  \"category\": \"food\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] }
+          }
+        },
+        {
+          "name": "Get Transaction by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/transactions/{{transactionId}}", "host": ["{{baseUrl}}"], "path": ["transactions", "{{transactionId}}"] }
+          }
+        },
+        {
+          "name": "Update Transaction",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 75000,\n  \"category\": \"transport\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/transactions/{{transactionId}}", "host": ["{{baseUrl}}"], "path": ["transactions", "{{transactionId}}"] }
+          }
+        },
+        {
+          "name": "Delete Transaction",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/transactions/{{transactionId}}", "host": ["{{baseUrl}}"], "path": ["transactions", "{{transactionId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Finance - Budgets",
+      "description": "Budget management",
+      "item": [
+        {
+          "name": "List Budgets",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/budgets", "host": ["{{baseUrl}}"], "path": ["budgets"] }
+          }
+        },
+        {
+          "name": "Create Budget",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('budgetId', json.data.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Food Budget\",\n  \"currency\": \"UZS\",\n  \"limit\": 1000000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/budgets", "host": ["{{baseUrl}}"], "path": ["budgets"] }
+          }
+        },
+        {
+          "name": "Get Budget by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/budgets/{{budgetId}}", "host": ["{{baseUrl}}"], "path": ["budgets", "{{budgetId}}"] }
+          }
+        },
+        {
+          "name": "Update Budget",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"limit\": 1500000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/budgets/{{budgetId}}", "host": ["{{baseUrl}}"], "path": ["budgets", "{{budgetId}}"] }
+          }
+        },
+        {
+          "name": "Delete Budget",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/budgets/{{budgetId}}", "host": ["{{baseUrl}}"], "path": ["budgets", "{{budgetId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Finance - Debts",
+      "description": "Debt management",
+      "item": [
+        {
+          "name": "List Debts",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/debts", "host": ["{{baseUrl}}"], "path": ["debts"] }
+          }
+        },
+        {
+          "name": "Create Debt",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('debtId', json.data.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Car Loan\",\n  \"balance\": 5000000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/debts", "host": ["{{baseUrl}}"], "path": ["debts"] }
+          }
+        },
+        {
+          "name": "Get Debt by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/debts/{{debtId}}", "host": ["{{baseUrl}}"], "path": ["debts", "{{debtId}}"] }
+          }
+        },
+        {
+          "name": "Update Debt",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"balance\": 4500000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/debts/{{debtId}}", "host": ["{{baseUrl}}"], "path": ["debts", "{{debtId}}"] }
+          }
+        },
+        {
+          "name": "Delete Debt",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/debts/{{debtId}}", "host": ["{{baseUrl}}"], "path": ["debts", "{{debtId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Notifications",
+      "description": "Notification management",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/notifications", "host": ["{{baseUrl}}"], "path": ["notifications"] }
+          }
+        },
+        {
+          "name": "Create Notification",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const json = pm.response.json();",
+                "if (json.success && json.data) {",
+                "  pm.collectionVariables.set('notificationId', json.data.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Reminder\",\n  \"message\": \"Don't forget your task!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/notifications", "host": ["{{baseUrl}}"], "path": ["notifications"] }
+          }
+        },
+        {
+          "name": "Get Notification by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/notifications/{{notificationId}}", "host": ["{{baseUrl}}"], "path": ["notifications", "{{notificationId}}"] }
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/notifications/{{notificationId}}", "host": ["{{baseUrl}}"], "path": ["notifications", "{{notificationId}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}

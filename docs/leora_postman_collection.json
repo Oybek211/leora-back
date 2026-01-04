@@ -1,0 +1,1140 @@
+{
+  "info": {
+    "name": "Leora API",
+    "description": "Postman collection for Leora server endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:9090/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "goalId", "value": "" },
+    { "key": "habitId", "value": "" },
+    { "key": "focusSessionId", "value": "" },
+    { "key": "accountId", "value": "" },
+    { "key": "transactionId", "value": "" },
+    { "key": "budgetId", "value": "" },
+    { "key": "debtId", "value": "" },
+    { "key": "notificationId", "value": "" },
+    { "key": "widgetId", "value": "" },
+    { "key": "subscriptionId", "value": "" },
+    { "key": "planId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"fullName\": \"Leora User\",\n  \"password\": \"SecurePass123!\",\n  \"confirmPassword\": \"SecurePass123!\",\n  \"region\": \"uzbekistan\",\n  \"currency\": \"UZS\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data) {",
+                  "  if (json.data.accessToken) pm.environment.set('accessToken', json.data.accessToken);",
+                  "  if (json.data.refreshToken) pm.environment.set('refreshToken', json.data.refreshToken);",
+                  "  if (json.data.user && json.data.user.id) pm.environment.set('userId', json.data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailOrUsername\": \"user@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"rememberMe\": true\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data) {",
+                  "  if (json.data.accessToken) pm.environment.set('accessToken', json.data.accessToken);",
+                  "  if (json.data.refreshToken) pm.environment.set('refreshToken', json.data.refreshToken);",
+                  "  if (json.data.user && json.data.user.id) pm.environment.set('userId', json.data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/refresh"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data) {",
+                  "  if (json.data.accessToken) pm.environment.set('accessToken', json.data.accessToken);",
+                  "  if (json.data.refreshToken) pm.environment.set('refreshToken', json.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/forgot-password"
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPass123!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/reset-password"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/me"
+          }
+        },
+        {
+          "name": "Update Me",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Updated Name\",\n  \"primaryCurrency\": \"USD\"\n}"
+            },
+            "url": "{{baseUrl}}/users/me"
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users?page=1&limit=20&role=user&sortBy=created_at&sortOrder=desc"
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"fullName\": \"New User\",\n  \"password\": \"SecurePass123!\",\n  \"confirmPassword\": \"SecurePass123!\",\n  \"region\": \"uzbekistan\",\n  \"currency\": \"UZS\"\n}"
+            },
+            "url": "{{baseUrl}}/users"
+          }
+        },
+        {
+          "name": "Update User By ID (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Admin Updated User\",\n  \"status\": \"active\"\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Update User By ID (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/tasks?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Finish report\",\n  \"status\": \"open\",\n  \"priority\": \"high\"\n}"
+            },
+            "url": "{{baseUrl}}/tasks"
+          }
+        },
+        {
+          "name": "Get Task",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          }
+        },
+        {
+          "name": "Update Task (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Finish report\",\n  \"status\": \"in_progress\",\n  \"priority\": \"medium\"\n}"
+            },
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          }
+        },
+        {
+          "name": "Update Task (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"done\"\n}"
+            },
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          }
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Goals",
+      "item": [
+        {
+          "name": "List Goals",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/goals?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Create Goal",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Learn Go\",\n  \"goalType\": \"education\",\n  \"status\": \"active\",\n  \"progressPercent\": 10\n}"
+            },
+            "url": "{{baseUrl}}/goals"
+          }
+        },
+        {
+          "name": "Get Goal",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/goals/{{goalId}}"
+          }
+        },
+        {
+          "name": "Update Goal (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Learn Go\",\n  \"goalType\": \"education\",\n  \"status\": \"active\",\n  \"progressPercent\": 40\n}"
+            },
+            "url": "{{baseUrl}}/goals/{{goalId}}"
+          }
+        },
+        {
+          "name": "Update Goal (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressPercent\": 60\n}"
+            },
+            "url": "{{baseUrl}}/goals/{{goalId}}"
+          }
+        },
+        {
+          "name": "Delete Goal",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/goals/{{goalId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Habits",
+      "item": [
+        {
+          "name": "List Habits",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/habits?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Create Habit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Morning run\",\n  \"habitType\": \"health\",\n  \"status\": \"active\"\n}"
+            },
+            "url": "{{baseUrl}}/habits"
+          }
+        },
+        {
+          "name": "Get Habit",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/habits/{{habitId}}"
+          }
+        },
+        {
+          "name": "Update Habit (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Morning run\",\n  \"habitType\": \"health\",\n  \"status\": \"paused\"\n}"
+            },
+            "url": "{{baseUrl}}/habits/{{habitId}}"
+          }
+        },
+        {
+          "name": "Update Habit (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"paused\"\n}"
+            },
+            "url": "{{baseUrl}}/habits/{{habitId}}"
+          }
+        },
+        {
+          "name": "Delete Habit",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/habits/{{habitId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Focus Sessions",
+      "item": [
+        {
+          "name": "List Sessions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/focus-sessions?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Create Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskId\": \"{{taskId}}\",\n  \"plannedMinutes\": 25,\n  \"status\": \"active\"\n}"
+            },
+            "url": "{{baseUrl}}/focus-sessions"
+          }
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/focus-sessions/{{focusSessionId}}"
+          }
+        },
+        {
+          "name": "Update Session (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskId\": \"{{taskId}}\",\n  \"plannedMinutes\": 50,\n  \"status\": \"active\"\n}"
+            },
+            "url": "{{baseUrl}}/focus-sessions/{{focusSessionId}}"
+          }
+        },
+        {
+          "name": "Update Session (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"complete\"\n}"
+            },
+            "url": "{{baseUrl}}/focus-sessions/{{focusSessionId}}"
+          }
+        },
+        {
+          "name": "Delete Session",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/focus-sessions/{{focusSessionId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Finance",
+      "item": [
+        {
+          "name": "Accounts",
+          "item": [
+            {
+              "name": "List Accounts",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/accounts?page=1&limit=20"
+              }
+            },
+            {
+              "name": "Create Account",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Main Wallet\",\n  \"currency\": \"USD\",\n  \"accountType\": \"cash\"\n}"
+                },
+                "url": "{{baseUrl}}/accounts"
+              }
+            },
+            {
+              "name": "Get Account",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/accounts/{{accountId}}"
+              }
+            },
+            {
+              "name": "Update Account (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Main Wallet\",\n  \"currency\": \"USD\",\n  \"accountType\": \"cash\"\n}"
+                },
+                "url": "{{baseUrl}}/accounts/{{accountId}}"
+              }
+            },
+            {
+              "name": "Update Account (PATCH)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Wallet\"\n}"
+                },
+                "url": "{{baseUrl}}/accounts/{{accountId}}"
+              }
+            },
+            {
+              "name": "Delete Account",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/accounts/{{accountId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transactions",
+          "item": [
+            {
+              "name": "List Transactions",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/transactions?page=1&limit=20"
+              }
+            },
+            {
+              "name": "Create Transaction",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"accountId\": \"{{accountId}}\",\n  \"amount\": 25.5,\n  \"currency\": \"USD\",\n  \"category\": \"food\"\n}"
+                },
+                "url": "{{baseUrl}}/transactions"
+              }
+            },
+            {
+              "name": "Get Transaction",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/transactions/{{transactionId}}"
+              }
+            },
+            {
+              "name": "Update Transaction (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"accountId\": \"{{accountId}}\",\n  \"amount\": 30.0,\n  \"currency\": \"USD\",\n  \"category\": \"food\"\n}"
+                },
+                "url": "{{baseUrl}}/transactions/{{transactionId}}"
+              }
+            },
+            {
+              "name": "Update Transaction (PATCH)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 30.0\n}"
+                },
+                "url": "{{baseUrl}}/transactions/{{transactionId}}"
+              }
+            },
+            {
+              "name": "Delete Transaction",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/transactions/{{transactionId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Budgets",
+          "item": [
+            {
+              "name": "List Budgets",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/budgets?page=1&limit=20"
+              }
+            },
+            {
+              "name": "Create Budget",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Groceries\",\n  \"currency\": \"USD\",\n  \"limit\": 300\n}"
+                },
+                "url": "{{baseUrl}}/budgets"
+              }
+            },
+            {
+              "name": "Get Budget",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/budgets/{{budgetId}}"
+              }
+            },
+            {
+              "name": "Update Budget (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Groceries\",\n  \"currency\": \"USD\",\n  \"limit\": 350\n}"
+                },
+                "url": "{{baseUrl}}/budgets/{{budgetId}}"
+              }
+            },
+            {
+              "name": "Update Budget (PATCH)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"limit\": 350\n}"
+                },
+                "url": "{{baseUrl}}/budgets/{{budgetId}}"
+              }
+            },
+            {
+              "name": "Delete Budget",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/budgets/{{budgetId}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Debts",
+          "item": [
+            {
+              "name": "List Debts",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/debts?page=1&limit=20"
+              }
+            },
+            {
+              "name": "Create Debt",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Loan\",\n  \"balance\": 1000\n}"
+                },
+                "url": "{{baseUrl}}/debts"
+              }
+            },
+            {
+              "name": "Get Debt",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/debts/{{debtId}}"
+              }
+            },
+            {
+              "name": "Update Debt (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Loan\",\n  \"balance\": 900\n}"
+                },
+                "url": "{{baseUrl}}/debts/{{debtId}}"
+              }
+            },
+            {
+              "name": "Update Debt (PATCH)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"balance\": 900\n}"
+                },
+                "url": "{{baseUrl}}/debts/{{debtId}}"
+              }
+            },
+            {
+              "name": "Delete Debt",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/debts/{{debtId}}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Create Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Reminder\",\n  \"message\": \"Stay focused\"\n}"
+            },
+            "url": "{{baseUrl}}/notifications"
+          }
+        },
+        {
+          "name": "Get Notification",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/{{notificationId}}"
+          }
+        },
+        {
+          "name": "Update Notification (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Reminder\",\n  \"message\": \"Updated message\"\n}"
+            },
+            "url": "{{baseUrl}}/notifications/{{notificationId}}"
+          }
+        },
+        {
+          "name": "Update Notification (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Updated message\"\n}"
+            },
+            "url": "{{baseUrl}}/notifications/{{notificationId}}"
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/notifications/{{notificationId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Widgets",
+      "item": [
+        {
+          "name": "List Widgets",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/widgets?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Create Widget",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Daily Summary\",\n  \"config\": {\n    \"style\": \"compact\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/widgets"
+          }
+        },
+        {
+          "name": "Get Widget",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/widgets/{{widgetId}}"
+          }
+        },
+        {
+          "name": "Update Widget (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Daily Summary\",\n  \"config\": {\n    \"style\": \"expanded\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/widgets/{{widgetId}}"
+          }
+        },
+        {
+          "name": "Update Widget (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Widget\"\n}"
+            },
+            "url": "{{baseUrl}}/widgets/{{widgetId}}"
+          }
+        },
+        {
+          "name": "Delete Widget",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/widgets/{{widgetId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search Query",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/search?q=focus"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Premium",
+      "item": [
+        {
+          "name": "Subscriptions",
+          "item": [
+            {
+              "name": "List Subscriptions",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/subscriptions"
+              }
+            },
+            {
+              "name": "Create Subscription",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tier\": \"pro\",\n  \"status\": \"active\",\n  \"cancelAtPeriodEnd\": false\n}"
+                },
+                "url": "{{baseUrl}}/subscriptions"
+              }
+            },
+            {
+              "name": "Get Subscription",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/subscriptions/{{subscriptionId}}"
+              }
+            },
+            {
+              "name": "Update Subscription (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tier\": \"pro\",\n  \"status\": \"active\",\n  \"cancelAtPeriodEnd\": false\n}"
+                },
+                "url": "{{baseUrl}}/subscriptions/{{subscriptionId}}"
+              }
+            },
+            {
+              "name": "Update Subscription (PATCH)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"canceled\"\n}"
+                },
+                "url": "{{baseUrl}}/subscriptions/{{subscriptionId}}"
+              }
+            },
+            {
+              "name": "Delete Subscription",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/subscriptions/{{subscriptionId}}"
+              }
+            },
+            {
+              "name": "Subscription Me",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/subscriptions/me"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Plans",
+          "item": [
+            {
+              "name": "List Plans",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/subscriptions/plans"
+              }
+            },
+            {
+              "name": "Create Plan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Pro\",\n  \"interval\": \"monthly\",\n  \"prices\": {\n    \"USD\": 9.99\n  }\n}"
+                },
+                "url": "{{baseUrl}}/subscriptions/plans"
+              }
+            },
+            {
+              "name": "Get Plan",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/subscriptions/plans/{{planId}}"
+              }
+            },
+            {
+              "name": "Update Plan (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Pro\",\n  \"interval\": \"monthly\",\n  \"prices\": {\n    \"USD\": 9.99\n  }\n}"
+                },
+                "url": "{{baseUrl}}/subscriptions/plans/{{planId}}"
+              }
+            },
+            {
+              "name": "Update Plan (PATCH)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"interval\": \"yearly\"\n}"
+                },
+                "url": "{{baseUrl}}/subscriptions/plans/{{planId}}"
+              }
+            },
+            {
+              "name": "Delete Plan",
+              "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/subscriptions/plans/{{planId}}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List Users (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/users"
+          }
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/users/{{userId}}/role"
+          }
+        }
+      ]
+    }
+  ]
+}
