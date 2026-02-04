@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,13 +29,24 @@ func NewMiddleware(service *Service) *Middleware {
 // RequireAuth validates tokens and populates context with user metadata.
 func (m *Middleware) RequireAuth() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		token, err := ExtractBearerToken(c.Get("Authorization"))
+		authHeader := c.Get("Authorization")
+		trimmed := strings.TrimSpace(authHeader)
+		hasHeader := trimmed != ""
+		hasBearer := strings.HasPrefix(strings.ToLower(trimmed), "bearer ")
+		log.Printf("[auth] RequireAuth header present=%v bearer=%v", hasHeader, hasBearer)
+
+		token, err := ExtractBearerToken(authHeader)
 		if err != nil {
 			return response.Failure(c, appErrors.InvalidToken)
 		}
 
 		claims, err := m.service.ValidateAccessToken(token)
 		if err != nil {
+			tail := token
+			if len(tail) > 8 {
+				tail = "..." + tail[len(tail)-8:]
+			}
+			log.Printf("[auth] RequireAuth failed for %s %s (token=%s): %v", c.Method(), c.Path(), tail, err)
 			if typed, ok := err.(*appErrors.Error); ok {
 				return response.Failure(c, typed)
 			}

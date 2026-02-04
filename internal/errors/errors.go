@@ -59,9 +59,9 @@ func WithDetails(err *Error, details map[string]interface{}) *Error {
 }
 
 var (
-	UserNotFound      = &Error{Code: -2000, Type: "NOT_FOUND", Message: "User not found"}
-	UserAlreadyExists = &Error{Code: -2001, Type: "CONFLICT", Message: "User already exists"}
-	InvalidUserData   = &Error{Code: -2002, Type: "VALIDATION", Message: "Invalid user data"}
+	UserNotFound      = &Error{Code: -2000, Type: "NOT_FOUND", Message: "User not found", Slug: "USER_NOT_FOUND"}
+	UserAlreadyExists = &Error{Code: -2001, Type: "CONFLICT", Message: "User already exists", Slug: "USER_ALREADY_EXISTS"}
+	InvalidUserData   = &Error{Code: -2002, Type: "VALIDATION", Message: "Invalid user data", Slug: "INVALID_USER_DATA"}
 )
 
 var (
@@ -73,14 +73,14 @@ var (
 )
 
 var (
-	InvalidCredentials = &Error{Code: -4000, Type: "UNAUTHORIZED", Message: "Invalid credentials"}
-	InvalidToken       = &Error{Code: -4001, Type: "UNAUTHORIZED", Message: "Invalid token"}
-	TokenExpired       = &Error{Code: -4002, Type: "ACCESS_TOKEN_EXPIRED", Message: "Access token expired"}
-	PermissionDenied   = &Error{Code: -4003, Type: "FORBIDDEN", Message: "Permission denied"}
-	RefreshTokenExpired = &Error{Code: -4004, Type: "REFRESH_TOKEN_EXPIRED", Message: "Refresh token expired"}
-	InvalidRefreshToken = &Error{Code: -4005, Type: "INVALID_REFRESH_TOKEN", Message: "Invalid refresh token"}
-	InvalidGoogleToken  = &Error{Code: -4006, Type: "UNAUTHORIZED", Message: "Invalid Google ID token"}
-	InvalidAppleToken   = &Error{Code: -4007, Type: "UNAUTHORIZED", Message: "Invalid Apple ID token"}
+	InvalidCredentials  = &Error{Code: -4000, Type: "UNAUTHORIZED", Message: "Invalid credentials", Slug: "INVALID_CREDENTIALS"}
+	InvalidToken        = &Error{Code: -4001, Type: "UNAUTHORIZED", Message: "Invalid token", Slug: "INVALID_TOKEN"}
+	TokenExpired        = &Error{Code: -4002, Type: "ACCESS_TOKEN_EXPIRED", Message: "Access token expired", Slug: "TOKEN_EXPIRED"}
+	PermissionDenied    = &Error{Code: -4003, Type: "FORBIDDEN", Message: "Permission denied", Slug: "PERMISSION_DENIED"}
+	RefreshTokenExpired = &Error{Code: -4004, Type: "REFRESH_TOKEN_EXPIRED", Message: "Refresh token expired", Slug: "REFRESH_TOKEN_EXPIRED"}
+	InvalidRefreshToken = &Error{Code: -4005, Type: "INVALID_REFRESH_TOKEN", Message: "Invalid refresh token", Slug: "INVALID_REFRESH_TOKEN"}
+	InvalidGoogleToken  = &Error{Code: -4006, Type: "UNAUTHORIZED", Message: "Invalid Google ID token", Slug: "INVALID_GOOGLE_TOKEN"}
+	InvalidAppleToken   = &Error{Code: -4007, Type: "UNAUTHORIZED", Message: "Invalid Apple ID token", Slug: "INVALID_APPLE_TOKEN"}
 )
 
 var (

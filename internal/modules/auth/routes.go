@@ -12,6 +12,6 @@ func RegisterRoutes(router fiber.Router, handler *Handler, middleware *Middlewar
 	group.Post("/reset-password", handler.ResetPassword)
 	group.Post("/google", handler.GoogleLogin)
 	group.Post("/apple", handler.AppleLogin)
-	group.Post("/logout", middleware.RequireAuth(), handler.Logout)
+	group.Post("/logout", handler.Logout)
 	group.Get("/me", middleware.RequireAuth(), handler.Me)
 }

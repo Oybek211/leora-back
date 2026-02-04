@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net/http"
 	"strings"
@@ -188,33 +189,56 @@ func (s *Service) Profile(ctx context.Context, userID string) (*User, error) {
 // ValidateAccessToken ensures the token is valid and not revoked.
 func (s *Service) ValidateAccessToken(token string) (*TokenClaims, error) {
 	if s.tokenStore.IsAccessTokenBlacklisted(token) {
+		log.Printf("[auth] access token blacklisted (len=%d)", len(token))
 		return nil, appErrors.InvalidToken
 	}
 
 	parsed, err := jwt.ParseWithClaims(token, &TokenClaims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			log.Printf("[auth] token signing method invalid: %v", t.Header["alg"])
 			return nil, appErrors.InvalidToken
 		}
 		return []byte(s.jwtSecret), nil
 	})
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
+			log.Printf("[auth] access token expired: %v", err)
 			return nil, appErrors.TokenExpired
 		}
+		log.Printf("[auth] access token parse error: %v", err)
 		return nil, appErrors.InvalidToken
 	}
 
 	claims, ok := parsed.Claims.(*TokenClaims)
 	if !ok {
+		log.Printf("[auth] token claims type invalid")
 		return nil, appErrors.InvalidToken
 	}
 	if err := claims.Valid(); err != nil {
 		if errors.Is(err, appErrors.TokenExpired) {
+			log.Printf("[auth] token claims expired: %v", err)
 			return nil, appErrors.TokenExpired
 		}
+		log.Printf("[auth] token claims invalid: %v", err)
 		return nil, appErrors.InvalidToken
 	}
 	return claims, nil
+}
+
+// ExtractUserIDFromToken parses the JWT and returns the userID without
+// checking the blacklist or expiry. Used by logout so that already-blacklisted
+// or expired tokens can still be processed.
+func (s *Service) ExtractUserIDFromToken(token string) (string, error) {
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	parsed, _, err := parser.ParseUnverified(token, &TokenClaims{})
+	if err != nil {
+		return "", err
+	}
+	claims, ok := parsed.Claims.(*TokenClaims)
+	if !ok || claims.UserID == "" {
+		return "", errors.New("invalid token claims")
+	}
+	return claims.UserID, nil
 }
 
 func (s *Service) issueTokens(user *User) (*Tokens, error) {
@@ -225,6 +249,7 @@ func (s *Service) issueTokens(user *User) (*Tokens, error) {
 	now := time.Now().UTC()
 	claims := TokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
 			Subject:   user.ID,
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -259,6 +284,7 @@ type GoogleLoginPayload struct {
 	IDToken  string
 	Region   string
 	Currency string
+	Mode     string // "register" or "login" (empty = login)
 }
 
 // GoogleLogin verifies a Google ID token and returns or creates the matching user.
@@ -281,6 +307,9 @@ func (s *Service) GoogleLogin(ctx context.Context, payload GoogleLoginPayload) (
 	var user *User
 
 	if identity != nil {
+		if payload.Mode == "register" {
+			return nil, nil, appErrors.UserAlreadyExists
+		}
 		// Returning user — fetch from DB.
 		user, err = s.repo.FindByID(ctx, identity.UserID)
 		if err != nil {
@@ -290,8 +319,14 @@ func (s *Service) GoogleLogin(ctx context.Context, payload GoogleLoginPayload) (
 		// New Google sign-in — check if email already exists.
 		existing, _ := s.repo.FindByEmail(ctx, normalizeEmail(email))
 		if existing != nil {
+			if payload.Mode == "register" {
+				return nil, nil, appErrors.UserAlreadyExists
+			}
 			user = existing
 		} else {
+			if payload.Mode == "login" {
+				return nil, nil, appErrors.UserNotFound
+			}
 			// Create a brand-new user (no password).
 			now := time.Now().UTC().Format(time.RFC3339)
 			region := strings.TrimSpace(payload.Region)
@@ -487,6 +522,7 @@ type AppleLoginPayload struct {
 	FullName      string // only provided on first sign-in
 	Region        string
 	Currency      string
+	Mode          string // "register" or "login" (empty = login)
 }
 
 // AppleLogin verifies an Apple identity token and returns or creates the matching user.
@@ -512,6 +548,9 @@ func (s *Service) AppleLogin(ctx context.Context, payload AppleLoginPayload) (*U
 	var user *User
 
 	if identity != nil {
+		if payload.Mode == "register" {
+			return nil, nil, appErrors.UserAlreadyExists
+		}
 		user, err = s.repo.FindByID(ctx, identity.UserID)
 		if err != nil {
 			return nil, nil, err
@@ -521,11 +560,17 @@ func (s *Service) AppleLogin(ctx context.Context, payload AppleLoginPayload) (*U
 		if email != "" {
 			existing, _ := s.repo.FindByEmail(ctx, normalizeEmail(email))
 			if existing != nil {
+				if payload.Mode == "register" {
+					return nil, nil, appErrors.UserAlreadyExists
+				}
 				user = existing
 			}
 		}
 
 		if user == nil {
+			if payload.Mode == "login" {
+				return nil, nil, appErrors.UserNotFound
+			}
 			now := time.Now().UTC().Format(time.RFC3339)
 			region := strings.TrimSpace(payload.Region)
 			if region == "" {

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"log"
 	"sync"
 	"time"
 )
@@ -74,9 +75,14 @@ func (s *InMemoryTokenStore) BlacklistAccessToken(token string, expiresAt time.T
 	if token == "" {
 		return
 	}
+	tail := token
+	if len(tail) > 8 {
+		tail = tail[len(tail)-8:]
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.blacklist[token] = expiresAt
+	log.Printf("[tokenStore] BlacklistAccessToken: added ...%s (total blacklisted: %d)", tail, len(s.blacklist))
 }
 
 func (s *InMemoryTokenStore) IsAccessTokenBlacklisted(token string) bool {
@@ -85,12 +91,29 @@ func (s *InMemoryTokenStore) IsAccessTokenBlacklisted(token string) bool {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	tail := token
+	if len(tail) > 8 {
+		tail = tail[len(tail)-8:]
+	}
+
 	if expiry, ok := s.blacklist[token]; ok {
 		if time.Now().After(expiry) {
 			delete(s.blacklist, token)
 			return false
 		}
+		log.Printf("[tokenStore] token ...%s IS in blacklist (expires %v)", tail, expiry)
 		return true
 	}
+
+	// Log all blacklisted tokens for debugging
+	for blToken := range s.blacklist {
+		blTail := blToken
+		if len(blTail) > 8 {
+			blTail = blTail[len(blTail)-8:]
+		}
+		log.Printf("[tokenStore] blacklist entry: ...%s (checked ...%s, match=%v)", blTail, tail, blToken == token)
+	}
+
 	return false
 }

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -82,6 +83,11 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		return response.Failure(c, appErrors.InvalidCredentials)
 	}
 
+	tail := tokens.AccessToken
+	if len(tail) > 8 {
+		tail = "..." + tail[len(tail)-8:]
+	}
+	log.Printf("[auth] Login success: user=%s token=%s", user.ID, tail)
 	return response.Success(c, fiber.Map{"user": user, "accessToken": tokens.AccessToken, "refreshToken": tokens.RefreshToken, "expiresIn": tokens.ExpiresIn}, nil)
 }
 
@@ -141,17 +147,31 @@ func (h *Handler) ResetPassword(c *fiber.Ctx) error {
 }
 
 func (h *Handler) Logout(c *fiber.Ctx) error {
-	token, err := ExtractBearerToken(c.Get("Authorization"))
+	authHeader := c.Get("Authorization")
+	trimmed := strings.TrimSpace(authHeader)
+	hasHeader := trimmed != ""
+	hasBearer := strings.HasPrefix(strings.ToLower(trimmed), "bearer ")
+	log.Printf("[auth] Logout header present=%v bearer=%v", hasHeader, hasBearer)
+
+	token, err := ExtractBearerToken(authHeader)
 	if err != nil {
-		return response.Failure(c, appErrors.InvalidToken)
+		// Token yo'q — local logout yetarli
+		return response.Success(c, fiber.Map{"message": "logged out"}, nil)
 	}
-	userID, ok := c.Locals(ContextUserIDKey).(string)
-	if !ok || userID == "" {
-		return response.Failure(c, appErrors.InvalidToken)
+
+	// Token'dan userID ni olish (blacklist tekshirmasdan)
+	userID, parseErr := h.service.ExtractUserIDFromToken(token)
+	if parseErr != nil {
+		// Token parse bo'lmasa ham logout muvaffaqiyatli
+		return response.Success(c, fiber.Map{"message": "logged out"}, nil)
 	}
-	if err := h.service.Logout(c.Context(), token, userID); err != nil {
-		return response.Failure(c, appErrors.InternalServerError)
+
+	tail := token
+	if len(tail) > 8 {
+		tail = "..." + tail[len(tail)-8:]
 	}
+	log.Printf("[auth] Logout: blacklisting token=%s for user=%s", tail, userID)
+	_ = h.service.Logout(c.Context(), token, userID)
 	return response.Success(c, fiber.Map{"message": "logged out"}, nil)
 }
 
@@ -159,6 +179,7 @@ type googleLoginRequest struct {
 	IDToken  string `json:"idToken"`
 	Region   string `json:"region"`
 	Currency string `json:"currency"`
+	Mode     string `json:"mode"`
 }
 
 func (h *Handler) GoogleLogin(c *fiber.Ctx) error {
@@ -171,6 +192,7 @@ func (h *Handler) GoogleLogin(c *fiber.Ctx) error {
 		IDToken:  payload.IDToken,
 		Region:   payload.Region,
 		Currency: payload.Currency,
+		Mode:     payload.Mode,
 	})
 	if err != nil {
 		if typed, ok := err.(*appErrors.Error); ok {
@@ -193,6 +215,7 @@ type appleLoginRequest struct {
 	FullName      string `json:"fullName"`
 	Region        string `json:"region"`
 	Currency      string `json:"currency"`
+	Mode          string `json:"mode"`
 }
 
 func (h *Handler) AppleLogin(c *fiber.Ctx) error {
@@ -207,6 +230,7 @@ func (h *Handler) AppleLogin(c *fiber.Ctx) error {
 		FullName:      payload.FullName,
 		Region:        payload.Region,
 		Currency:      payload.Currency,
+		Mode:          payload.Mode,
 	})
 	if err != nil {
 		if typed, ok := err.(*appErrors.Error); ok {

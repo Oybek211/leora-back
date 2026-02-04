@@ -70,3 +70,12 @@ Response `data`:
 { "user": { "id": "uuid", "email": "...", "fullName": "...", "region": "...", "primaryCurrency": "...", "role": "user", "status": "active", "permissions": [], "createdAt": "...", "updatedAt": "..." } }
 ```
 
+### POST /auth/logout
+Request:
+- `Authorization: Bearer <accessToken>` header required
+- No request body
+
+Response `data`:
+```json
+{ "message": "logged out" }
+```

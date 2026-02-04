@@ -48,16 +48,20 @@ func main() {
 	app.Use(logger.New())
 	app.Use(recover.New())
 
-	// CORS middleware
-	allowOrigins := cfg.App.CORSOrigins
+	// CORS middleware — faqat aniq originlarga ruxsat
+	allowOrigins := strings.TrimSpace(cfg.App.CORSOrigins)
 	if allowOrigins == "" {
 		allowOrigins = "http://localhost:3000,http://localhost:9090"
+	}
+	allowCredentials := true
+	if allowOrigins == "*" {
+		allowCredentials = false
 	}
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     strings.Join([]string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}, ","),
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
-		AllowCredentials: true,
+		AllowCredentials: allowCredentials,
 	}))
 
 	// Health check (before auth middleware, no prefix group needed for /api/v1/health)
