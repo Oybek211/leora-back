@@ -43,3 +43,4 @@ See [.env.example](.env.example) for the full list.
 | `APPLE_TEAM_ID` | No | Apple developer team ID |
 | `APPLE_KEY_ID` | Yes | Apple Sign-In key ID |
 | `CORS_ORIGINS` | No | Comma-separated allowed origins |
+# leora-server0v2
