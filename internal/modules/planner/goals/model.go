@@ -2,32 +2,32 @@ package goals
 
 // Goal represents high-level goal metadata with all fields from BACKEND_API.md
 type Goal struct {
-	ID                   string       `json:"id"`
-	Title                string       `json:"title"`
-	Description          *string      `json:"description,omitempty"`
-	GoalType             string       `json:"goalType"`
-	Status               string       `json:"status"`
-	ShowStatus           string       `json:"showStatus"`
-	MetricType           string       `json:"metricType"`
-	Direction            string       `json:"direction"`
-	Unit                 *string      `json:"unit,omitempty"`
-	InitialValue         *float64     `json:"initialValue,omitempty"`
-	TargetValue          *float64     `json:"targetValue,omitempty"`
-	ProgressTargetValue  *float64     `json:"progressTargetValue,omitempty"`
-	CurrentValue         float64      `json:"currentValue"`
-	FinanceMode          *string      `json:"financeMode,omitempty"`
-	Currency             *string      `json:"currency,omitempty"`
-	LinkedBudgetID       *string      `json:"linkedBudgetId,omitempty"`
-	LinkedDebtID         *string      `json:"linkedDebtId,omitempty"`
-	StartDate            *string      `json:"startDate,omitempty"`
-	TargetDate           *string      `json:"targetDate,omitempty"`
-	CompletedDate        *string      `json:"completedDate,omitempty"`
-	ProgressPercent      float64      `json:"progressPercent"`
-	Milestones           []*Milestone `json:"milestones,omitempty"`
-	Stats                *GoalStats   `json:"stats,omitempty"`
-	CreatedAt            string       `json:"createdAt,omitempty"`
-	UpdatedAt            string       `json:"updatedAt,omitempty"`
-	DeletedAt            *string      `json:"deletedAt,omitempty"`
+	ID                  string       `json:"id"`
+	Title               string       `json:"title"`
+	Description         *string      `json:"description,omitempty"`
+	GoalType            string       `json:"goalType"`
+	Status              string       `json:"status"`
+	ShowStatus          string       `json:"showStatus"`
+	MetricType          string       `json:"metricType"`
+	Direction           string       `json:"direction"`
+	Unit                *string      `json:"unit,omitempty"`
+	InitialValue        *float64     `json:"initialValue,omitempty"`
+	TargetValue         *float64     `json:"targetValue,omitempty"`
+	ProgressTargetValue *float64     `json:"progressTargetValue,omitempty"`
+	CurrentValue        float64      `json:"currentValue"`
+	FinanceMode         *string      `json:"financeMode,omitempty"`
+	Currency            *string      `json:"currency,omitempty"`
+	LinkedBudgetID      *string      `json:"linkedBudgetId,omitempty"`
+	LinkedDebtID        *string      `json:"linkedDebtId,omitempty"`
+	StartDate           *string      `json:"startDate,omitempty"`
+	TargetDate          *string      `json:"targetDate,omitempty"`
+	CompletedDate       *string      `json:"completedDate,omitempty"`
+	ProgressPercent     float64      `json:"progressPercent"`
+	Milestones          []*Milestone `json:"milestones,omitempty"`
+	Stats               *GoalStats   `json:"stats,omitempty"`
+	CreatedAt           string       `json:"createdAt,omitempty"`
+	UpdatedAt           string       `json:"updatedAt,omitempty"`
+	DeletedAt           *string      `json:"deletedAt,omitempty"`
 }
 
 // Milestone represents a goal milestone
@@ -58,9 +58,8 @@ type CheckIn struct {
 
 // GoalStats represents goal statistics
 type GoalStats struct {
-	FinancialProgressPercent float64 `json:"financialProgressPercent"`
-	HabitsProgressPercent    float64 `json:"habitsProgressPercent"`
-	TasksProgressPercent     float64 `json:"tasksProgressPercent"`
-	FocusMinutesLast30       int     `json:"focusMinutesLast30"`
-	UpdatedAt                string  `json:"updatedAt,omitempty"`
+	TotalTasks     int `json:"totalTasks" db:"total_tasks"`
+	CompletedTasks int `json:"completedTasks" db:"completed_tasks"`
+	TotalHabits    int `json:"totalHabits" db:"total_habits"`
+	FocusMinutes   int `json:"focusMinutes" db:"focus_minutes"`
 }

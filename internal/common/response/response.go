@@ -2,6 +2,7 @@ package response
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/leora/leora-server/internal/common/localization"
 	appErrors "github.com/leora/leora-server/internal/errors"
 )
 
@@ -27,12 +28,42 @@ func Success(c *fiber.Ctx, data interface{}, meta *Meta) error {
 // Failure returns a standardized error.
 func Failure(c *fiber.Ctx, err *appErrors.Error) error {
 	status := appErrors.StatusFromType(err.Type)
+	code := err.Slug
+	if code == "" {
+		code = err.Type
+	}
+	lang := localization.ResolveLanguage(c)
+	message := localization.TranslateError(c.Context(), code, err.Message, lang)
 	return c.Status(status).JSON(fiber.Map{
 		"success": false,
+		"data":    nil,
 		"error": fiber.Map{
-			"code":    err.Code,
-			"type":    err.Type,
-			"message": err.Message,
+			"code":    code,
+			"legacyCode": err.Code,
+			"type":    normalizeErrorType(err.Type),
+			"message": message,
+			"details": err.Details,
 		},
+		"meta": nil,
 	})
+}
+
+func SuccessWithStatus(c *fiber.Ctx, status int, data interface{}, meta *Meta) error {
+	return c.Status(status).JSON(fiber.Map{
+		"success": true,
+		"data":    data,
+		"meta":    meta,
+		"error":   nil,
+	})
+}
+
+func normalizeErrorType(errType string) string {
+	switch errType {
+	case "VALIDATION":
+		return "VALIDATION_ERROR"
+	case "INTERNAL":
+		return "INTERNAL_ERROR"
+	default:
+		return errType
+	}
 }

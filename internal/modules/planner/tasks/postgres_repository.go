@@ -327,6 +327,43 @@ func (r *PostgresRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// BulkDelete soft deletes multiple tasks by their IDs
+func (r *PostgresRepository) BulkDelete(ctx context.Context, ids []string) (int64, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok || userID == "" {
+		return 0, appErrors.InvalidToken
+	}
+
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	now := utils.NowUTC()
+	// Build placeholders for ids
+	placeholders := ""
+	args := []interface{}{now, now, userID}
+	for i, id := range ids {
+		if i > 0 {
+			placeholders += ","
+		}
+		placeholders += fmt.Sprintf("$%d", i+4)
+		args = append(args, id)
+	}
+
+	result, err := r.db.ExecContext(ctx, fmt.Sprintf(`
+		UPDATE tasks
+		SET deleted_at = $1, updated_at = $2, show_status = 'deleted'
+		WHERE user_id = $3 AND id IN (%s) AND deleted_at IS NULL
+	`, placeholders), args...)
+
+	if err != nil {
+		return 0, appErrors.DatabaseError
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows, nil
+}
+
 func (r *PostgresRepository) fetchTask(ctx context.Context, query string, args ...interface{}) (*Task, error) {
 	var row taskRow
 	if err := r.db.GetContext(ctx, &row, query, args...); err != nil {
@@ -509,4 +546,39 @@ func (r *PostgresRepository) UpdateChecklistItem(ctx context.Context, taskID, it
 	}
 
 	return nil
+}
+
+// FindByFinanceLink returns pending tasks with matching financeLink for the current user
+func (r *PostgresRepository) FindByFinanceLink(ctx context.Context, financeLink string) ([]*Task, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok || userID == "" {
+		return nil, appErrors.InvalidToken
+	}
+
+	query := fmt.Sprintf(`
+		SELECT %s FROM tasks
+		WHERE user_id = $1
+		  AND finance_link = $2
+		  AND status != 'completed'
+		  AND status != 'canceled'
+		  AND deleted_at IS NULL
+		ORDER BY created_at ASC
+	`, taskSelectFields)
+
+	rows, err := r.db.QueryxContext(ctx, query, userID, financeLink)
+	if err != nil {
+		return nil, appErrors.DatabaseError
+	}
+	defer rows.Close()
+
+	var tasks []*Task
+	for rows.Next() {
+		var row taskRow
+		if err := rows.StructScan(&row); err != nil {
+			return nil, appErrors.DatabaseError
+		}
+		tasks = append(tasks, mapRowToTask(row))
+	}
+
+	return tasks, nil
 }

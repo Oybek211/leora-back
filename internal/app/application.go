@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/leora/leora-server/internal/config"
 	"github.com/leora/leora-server/internal/db"
+	"github.com/leora/leora-server/internal/common/localization"
 	redisclient "github.com/leora/leora-server/internal/redis"
 	"github.com/leora/leora-server/internal/services"
 	"github.com/redis/go-redis/v9"
@@ -37,6 +38,10 @@ func NewApplication() (*Application, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect postgres: %w", err)
 	}
+	if err := db.RunMigrations(dbConn, "migrations"); err != nil {
+		return nil, fmt.Errorf("run migrations: %w", err)
+	}
+	localization.SetDB(dbConn)
 
 	cache, err := redisclient.New(cfg.Redis)
 	if err != nil {

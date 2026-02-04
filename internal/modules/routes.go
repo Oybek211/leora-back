@@ -8,13 +8,18 @@ import (
 	"github.com/leora/leora-server/internal/config"
 	adminModule "github.com/leora/leora-server/internal/modules/admin"
 	authModule "github.com/leora/leora-server/internal/modules/auth"
+	dashboardModule "github.com/leora/leora-server/internal/modules/dashboard"
 	financeModule "github.com/leora/leora-server/internal/modules/finance"
+	homeModule "github.com/leora/leora-server/internal/modules/home"
+	insightsModule "github.com/leora/leora-server/internal/modules/insights"
 	"github.com/leora/leora-server/internal/modules/notifications"
+	metaModule "github.com/leora/leora-server/internal/modules/meta"
 	"github.com/leora/leora-server/internal/modules/planner/focus"
 	goalsModule "github.com/leora/leora-server/internal/modules/planner/goals"
 	habitsModule "github.com/leora/leora-server/internal/modules/planner/habits"
 	tasksModule "github.com/leora/leora-server/internal/modules/planner/tasks"
 	premiumModule "github.com/leora/leora-server/internal/modules/premium"
+	reportsModule "github.com/leora/leora-server/internal/modules/reports"
 	searchModule "github.com/leora/leora-server/internal/modules/search"
 	"github.com/leora/leora-server/internal/modules/users"
 	widgetsModule "github.com/leora/leora-server/internal/modules/widgets"
@@ -25,6 +30,8 @@ func RegisterRoutes(app fiber.Router, cfg *config.Config, db *sqlx.DB, cache *re
 	authRepo := authModule.NewPostgresRepository(db)
 	tokenStore := authModule.NewInMemoryTokenStore()
 	authService := authModule.NewService(authRepo, tokenStore, cfg.App.JWTSecret, cfg.App.JWTAccessTTL, cfg.App.JWTRefreshTTL)
+	authService.SetGoogleClientID(cfg.App.GoogleOAuthClient)
+	authService.SetAppleBundleID(cfg.App.AppleBundleID)
 	authHandler := authModule.NewHandler(authService)
 	authMiddleware := authModule.NewMiddleware(authService)
 	authModule.RegisterRoutes(app, authHandler, authMiddleware)
@@ -57,10 +64,30 @@ func RegisterRoutes(app fiber.Router, cfg *config.Config, db *sqlx.DB, cache *re
 
 	// Finance module - PostgreSQL
 	financeRepo := financeModule.NewPostgresRepository(db)
-	financeHandler := financeModule.NewHandler(financeModule.NewService(financeRepo))
+	financeHandler := financeModule.NewHandler(financeModule.NewService(financeRepo, cache))
 	financeGroup := protected.Group("")
 	financeGroup.Use(authMiddleware.RequirePermission("finance:read"))
 	financeModule.RegisterRoutes(financeGroup, financeHandler)
+
+	// Dashboard module
+	dashboardHandler := dashboardModule.NewHandler(dashboardModule.NewService(db))
+	dashboardModule.RegisterRoutes(protected, dashboardHandler)
+
+	// Home module
+	homeHandler := homeModule.NewHandler(homeModule.NewService(db))
+	homeModule.RegisterRoutes(protected, homeHandler)
+
+	// Reports module
+	reportsHandler := reportsModule.NewHandler(reportsModule.NewService(db))
+	reportsModule.RegisterRoutes(protected, reportsHandler)
+
+	// Meta module
+	metaHandler := metaModule.NewHandler(metaModule.NewService(db))
+	metaModule.RegisterRoutes(protected, metaHandler)
+
+	// Insights module
+	insightsHandler := insightsModule.NewHandler()
+	insightsModule.RegisterRoutes(protected, insightsHandler)
 
 	// Notifications module - PostgreSQL
 	notificationsRepo := notifications.NewPostgresRepository(db)

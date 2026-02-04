@@ -9,9 +9,14 @@ import (
 )
 
 // NewPostgres creates a new sqlx DB pool.
+// If cfg.URL (DATABASE_URL) is set, it is used directly; otherwise
+// the individual host/port/user/password/name fields are used.
 func NewPostgres(cfg config.DatabaseConfig) (*sqlx.DB, error) {
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name)
+	dsn := cfg.URL
+	if dsn == "" {
+		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+			cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name)
+	}
 	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		return nil, err

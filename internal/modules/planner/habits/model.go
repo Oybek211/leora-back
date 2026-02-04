@@ -2,35 +2,35 @@ package habits
 
 // Habit represents a recurring behavior to track
 type Habit struct {
-	ID                 string        `json:"id"`
-	Title              string        `json:"title"`
-	Description        *string       `json:"description,omitempty"`
-	IconID             *string       `json:"iconId,omitempty"`
-	HabitType          string        `json:"habitType"`
-	Status             string        `json:"status"`
-	ShowStatus         string        `json:"showStatus"`
-	GoalID             *string       `json:"goalId,omitempty"`
-	Frequency          string        `json:"frequency"`
-	DaysOfWeek         []int         `json:"daysOfWeek,omitempty"`
-	TimesPerWeek       *int          `json:"timesPerWeek,omitempty"`
-	TimeOfDay          *string       `json:"timeOfDay,omitempty"`
-	CompletionMode     string        `json:"completionMode"`
-	TargetPerDay       *float64      `json:"targetPerDay,omitempty"`
-	Unit               *string       `json:"unit,omitempty"`
-	CountingType       string        `json:"countingType"`
-	Difficulty         string        `json:"difficulty"`
-	Priority           string        `json:"priority"`
+	ID                  string       `json:"id"`
+	Title               string       `json:"title"`
+	Description         *string      `json:"description,omitempty"`
+	IconID              *string      `json:"iconId,omitempty"`
+	HabitType           string       `json:"habitType"`
+	Status              string       `json:"status"`
+	ShowStatus          string       `json:"showStatus"`
+	GoalID              *string      `json:"goalId,omitempty"`
+	Frequency           string       `json:"frequency"`
+	DaysOfWeek          []int        `json:"daysOfWeek,omitempty"`
+	TimesPerWeek        *int         `json:"timesPerWeek,omitempty"`
+	TimeOfDay           *string      `json:"timeOfDay,omitempty"`
+	CompletionMode      string       `json:"completionMode"`
+	TargetPerDay        *float64     `json:"targetPerDay,omitempty"`
+	Unit                *string      `json:"unit,omitempty"`
+	CountingType        string       `json:"countingType"`
+	Difficulty          string       `json:"difficulty"`
+	Priority            string       `json:"priority"`
 	ChallengeLengthDays *int         `json:"challengeLengthDays,omitempty"`
-	ReminderEnabled    bool          `json:"reminderEnabled"`
-	ReminderTime       *string       `json:"reminderTime,omitempty"`
-	StreakCurrent      int           `json:"streakCurrent"`
-	StreakBest         int           `json:"streakBest"`
-	CompletionRate30d  float64       `json:"completionRate30d"`
-	FinanceRule        *FinanceRule  `json:"financeRule,omitempty"`
-	LinkedGoalIDs      []string      `json:"linkedGoalIds,omitempty"`
-	CreatedAt          string        `json:"createdAt,omitempty"`
-	UpdatedAt          string        `json:"updatedAt,omitempty"`
-	DeletedAt          *string       `json:"deletedAt,omitempty"`
+	ReminderEnabled     bool         `json:"reminderEnabled"`
+	ReminderTime        *string      `json:"reminderTime,omitempty"`
+	StreakCurrent       int          `json:"streakCurrent"`
+	StreakBest          int          `json:"streakBest"`
+	CompletionRate30d   float64      `json:"completionRate30d"`
+	FinanceRule         *FinanceRule `json:"financeRule,omitempty"`
+	LinkedGoalIDs       []string     `json:"linkedGoalIds,omitempty"`
+	CreatedAt           string       `json:"createdAt,omitempty"`
+	UpdatedAt           string       `json:"updatedAt,omitempty"`
+	DeletedAt           *string      `json:"deletedAt,omitempty"`
 }
 
 // FinanceRule defines automatic completion rules for finance habits

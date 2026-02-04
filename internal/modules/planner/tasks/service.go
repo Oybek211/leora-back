@@ -58,6 +58,11 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
+// BulkDelete soft deletes multiple tasks
+func (s *Service) BulkDelete(ctx context.Context, ids []string) (int64, error) {
+	return s.repo.BulkDelete(ctx, ids)
+}
+
 func (s *Service) Complete(ctx context.Context, id string) (*Task, error) {
 	task, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -84,4 +89,41 @@ func (s *Service) Reopen(ctx context.Context, id string) (*Task, error) {
 
 func (s *Service) UpdateChecklistItem(ctx context.Context, taskID, itemID string, completed bool) error {
 	return s.repo.UpdateChecklistItem(ctx, taskID, itemID, completed)
+}
+
+// FinanceTriggerResult represents the result of checking finance triggers
+type FinanceTriggerResult struct {
+	FinanceLink    string  `json:"financeLink"`
+	TasksFound     int     `json:"tasksFound"`
+	TasksCompleted int     `json:"tasksCompleted"`
+	CompletedTasks []*Task `json:"completedTasks"`
+}
+
+// CheckFinanceTrigger finds tasks with matching financeLink and auto-completes them
+func (s *Service) CheckFinanceTrigger(ctx context.Context, financeLink string) (*FinanceTriggerResult, error) {
+	// Find tasks with this financeLink
+	tasks, err := s.repo.FindByFinanceLink(ctx, financeLink)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &FinanceTriggerResult{
+		FinanceLink:    financeLink,
+		TasksFound:     len(tasks),
+		TasksCompleted: 0,
+		CompletedTasks: make([]*Task, 0),
+	}
+
+	// Auto-complete the first matching task (oldest first)
+	if len(tasks) > 0 {
+		task := tasks[0]
+		task.Status = "completed"
+		if err := s.repo.Update(ctx, task); err != nil {
+			return nil, err
+		}
+		result.TasksCompleted = 1
+		result.CompletedTasks = append(result.CompletedTasks, task)
+	}
+
+	return result, nil
 }

@@ -6,6 +6,8 @@ app:
   jwtSecret: changeme
   jwtAccessTTL: 168h
   jwtRefreshTTL: 24h
+  googleOAuthClient: "195986755853-qopo6nfnngllgg3e4aip4ccegthd37bq.apps.googleusercontent.com"
+  appleBundleID: "com.sarvar.leora"
 
 database:
   host: postgres

@@ -40,6 +40,16 @@ type ListUsersOptions struct {
 	Limit     int
 }
 
+// AuthIdentity links an external provider account to a local user.
+type AuthIdentity struct {
+	ID         string `db:"id"`
+	UserID     string `db:"user_id"`
+	Provider   string `db:"provider"`
+	ProviderID string `db:"provider_id"`
+	Email      string `db:"email"`
+	CreatedAt  string `db:"created_at"`
+}
+
 // Repository defines authentication persistence behavior.
 type Repository interface {
 	CreateUser(ctx context.Context, user *User) error
@@ -48,6 +58,8 @@ type Repository interface {
 	UpdateUser(ctx context.Context, user *User) error
 	ListUsers(ctx context.Context, opts ListUsersOptions) ([]*User, int, error)
 	DeleteUser(ctx context.Context, id string) error
+	FindIdentity(ctx context.Context, provider, providerID string) (*AuthIdentity, error)
+	CreateIdentity(ctx context.Context, identity *AuthIdentity) error
 }
 
 // InMemoryRepo is a lightweight repository used during initial development.
@@ -55,6 +67,7 @@ type InMemoryRepo struct {
 	mu           sync.RWMutex
 	usersByID    map[string]*User
 	usersByEmail map[string]*User
+	identities   map[string]*AuthIdentity // key: "provider:providerID"
 }
 
 // NewInMemoryRepo constructs an in-memory user repository.
@@ -62,6 +75,7 @@ func NewInMemoryRepo() *InMemoryRepo {
 	return &InMemoryRepo{
 		usersByID:    make(map[string]*User),
 		usersByEmail: make(map[string]*User),
+		identities:   make(map[string]*AuthIdentity),
 	}
 }
 
@@ -199,6 +213,24 @@ func (r *InMemoryRepo) ListUsers(ctx context.Context, opts ListUsersOptions) ([]
 		snapshot = append(snapshot, sanitizeUser(user))
 	}
 	return snapshot, total, nil
+}
+
+func (r *InMemoryRepo) FindIdentity(ctx context.Context, provider, providerID string) (*AuthIdentity, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	key := provider + ":" + providerID
+	if id, ok := r.identities[key]; ok {
+		return id, nil
+	}
+	return nil, nil
+}
+
+func (r *InMemoryRepo) CreateIdentity(ctx context.Context, identity *AuthIdentity) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	key := identity.Provider + ":" + identity.ProviderID
+	r.identities[key] = identity
+	return nil
 }
 
 func cleanSortField(value string) string {
@@ -383,6 +415,35 @@ func (r *PostgresRepository) ListUsers(ctx context.Context, opts ListUsersOption
 		result = append(result, sanitizeUser(user))
 	}
 	return result, total, nil
+}
+
+func (r *PostgresRepository) FindIdentity(ctx context.Context, provider, providerID string) (*AuthIdentity, error) {
+	var identity AuthIdentity
+	err := r.db.GetContext(ctx,
+		&identity,
+		`SELECT id, user_id, provider, provider_id, email, created_at
+		 FROM auth_identities WHERE provider = $1 AND provider_id = $2`,
+		provider, providerID,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, appErrors.DatabaseError
+	}
+	return &identity, nil
+}
+
+func (r *PostgresRepository) CreateIdentity(ctx context.Context, identity *AuthIdentity) error {
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO auth_identities (id, user_id, provider, provider_id, email, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		identity.ID, identity.UserID, identity.Provider, identity.ProviderID, identity.Email, identity.CreatedAt,
+	)
+	if err != nil {
+		return appErrors.DatabaseError
+	}
+	return nil
 }
 
 func (r *PostgresRepository) fetchUser(ctx context.Context, query string, args ...interface{}) (*User, error) {

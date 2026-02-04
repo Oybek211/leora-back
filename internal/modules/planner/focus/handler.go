@@ -27,6 +27,27 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	if err != nil {
 		return response.Failure(c, appErrors.InternalServerError)
 	}
+	status := c.Query("status")
+	taskID := c.Query("taskId")
+	goalID := c.Query("goalId")
+	filtered := make([]*Session, 0, len(list))
+	for _, session := range list {
+		if status != "" && session.Status != status {
+			continue
+		}
+		if taskID != "" {
+			if session.TaskID == nil || *session.TaskID != taskID {
+				continue
+			}
+		}
+		if goalID != "" {
+			if session.GoalID == nil || *session.GoalID != goalID {
+				continue
+			}
+		}
+		filtered = append(filtered, session)
+	}
+	list = filtered
 	start, end := utils.SliceBounds(len(list), page, limit)
 	paged := list[start:end]
 	return response.Success(c, paged, &response.Meta{Page: page, Limit: limit, Total: len(list), TotalPages: utils.TotalPages(len(list), limit)})

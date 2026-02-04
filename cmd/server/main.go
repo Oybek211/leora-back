@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/leora/leora-server/internal/common/response"
@@ -45,6 +47,23 @@ func main() {
 	})
 	app.Use(logger.New())
 	app.Use(recover.New())
+
+	// CORS middleware
+	allowOrigins := cfg.App.CORSOrigins
+	if allowOrigins == "" {
+		allowOrigins = "http://localhost:3000,http://localhost:9090"
+	}
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     allowOrigins,
+		AllowMethods:     strings.Join([]string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}, ","),
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowCredentials: true,
+	}))
+
+	// Health check (before auth middleware, no prefix group needed for /api/v1/health)
+	app.Get(cfg.App.BasePath+"/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"status": "ok"})
+	})
 
 	moduleRouter := app.Group(cfg.App.BasePath)
 	modules.RegisterRoutes(moduleRouter, cfg, dbConn, cache)

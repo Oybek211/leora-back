@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 	"github.com/leora/leora-server/internal/common/utils"
 	appErrors "github.com/leora/leora-server/internal/errors"
+	"github.com/lib/pq"
 )
 
 const habitSelectFields = `
@@ -204,6 +204,95 @@ func (r *PostgresRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// BulkDelete soft deletes multiple habits by their IDs
+func (r *PostgresRepository) BulkDelete(ctx context.Context, ids []string) (int64, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok || userID == "" {
+		return 0, appErrors.InvalidToken
+	}
+
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	now := utils.NowUTC()
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE habits
+		SET deleted_at = $1, updated_at = $2, show_status = 'deleted'
+		WHERE id = ANY($3) AND user_id = $4 AND deleted_at IS NULL
+	`, now, now, pq.Array(ids), userID)
+	if err != nil {
+		return 0, appErrors.DatabaseError
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows, nil
+}
+
+// ToggleCompletion toggles the completion status for a habit on a specific date
+func (r *PostgresRepository) ToggleCompletion(ctx context.Context, habitID, dateKey string) (*HabitCompletion, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok || userID == "" {
+		return nil, appErrors.InvalidToken
+	}
+
+	// Verify habit belongs to user
+	_, err := r.GetByID(ctx, habitID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check current completion status
+	var existing struct {
+		ID     string `db:"id"`
+		Status string `db:"status"`
+	}
+	err = r.db.GetContext(ctx, &existing, `
+		SELECT id, status
+		FROM habit_completions
+		WHERE habit_id = $1 AND date_key = $2
+	`, habitID, dateKey)
+
+	now := utils.NowUTC()
+	completion := &HabitCompletion{
+		HabitID:   habitID,
+		DateKey:   dateKey,
+		CreatedAt: now,
+	}
+
+	if err == sql.ErrNoRows {
+		// No completion exists - create as 'done'
+		completion.ID = uuid.NewString()
+		completion.Status = "done"
+		_, err = r.db.ExecContext(ctx, `
+			INSERT INTO habit_completions (id, habit_id, date_key, status, created_at)
+			VALUES ($1, $2, $3, $4, $5)
+		`, completion.ID, completion.HabitID, completion.DateKey, completion.Status, completion.CreatedAt)
+	} else if err != nil {
+		return nil, appErrors.DatabaseError
+	} else {
+		// Completion exists - toggle status
+		completion.ID = existing.ID
+		if existing.Status == "done" {
+			completion.Status = "miss"
+		} else {
+			completion.Status = "done"
+		}
+		_, err = r.db.ExecContext(ctx, `
+			UPDATE habit_completions SET status = $1 WHERE id = $2
+		`, completion.Status, completion.ID)
+	}
+
+	if err != nil {
+		return nil, appErrors.DatabaseError
+	}
+
+	// Update streak and completion rate
+	_ = r.updateHabitStats(ctx, habitID)
+
+	return completion, nil
+}
+
 func (r *PostgresRepository) CreateCompletion(ctx context.Context, completion *HabitCompletion) error {
 	userID, ok := ctx.Value("user_id").(string)
 	if !ok || userID == "" {
@@ -250,7 +339,7 @@ func (r *PostgresRepository) GetCompletions(ctx context.Context, habitID string)
 	}
 
 	rows, err := r.db.QueryxContext(ctx, `
-		SELECT id, habit_id, date_key, status, value, created_at
+		SELECT id, habit_id, date_key, status, value, TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as created_at
 		FROM habit_completions
 		WHERE habit_id = $1
 		ORDER BY date_key DESC
@@ -263,7 +352,9 @@ func (r *PostgresRepository) GetCompletions(ctx context.Context, habitID string)
 	var completions []*HabitCompletion
 	for rows.Next() {
 		var completion HabitCompletion
-		_ = rows.StructScan(&completion)
+		if err := rows.StructScan(&completion); err != nil {
+			continue // Skip rows with scan errors
+		}
 		completions = append(completions, &completion)
 	}
 	return completions, nil
@@ -338,14 +429,15 @@ func (r *PostgresRepository) updateHabitStats(ctx context.Context, habitID strin
 	// to calculate current streak, best streak, and 30-day completion rate
 
 	// Calculate 30-day completion rate
+	// date_key is stored as 'YYYY-MM-DD' text, so we compare as DATE
 	var doneCount, totalCount int
 	r.db.GetContext(ctx, &doneCount, `
 		SELECT COUNT(*) FROM habit_completions
-		WHERE habit_id = $1 AND date_key >= NOW() - INTERVAL '30 days' AND status = 'done'
+		WHERE habit_id = $1 AND date_key::DATE >= (CURRENT_DATE - INTERVAL '30 days') AND status = 'done'
 	`, habitID)
 	r.db.GetContext(ctx, &totalCount, `
 		SELECT COUNT(*) FROM habit_completions
-		WHERE habit_id = $1 AND date_key >= NOW() - INTERVAL '30 days'
+		WHERE habit_id = $1 AND date_key::DATE >= (CURRENT_DATE - INTERVAL '30 days')
 	`, habitID)
 
 	var completionRate float64
@@ -359,34 +451,68 @@ func (r *PostgresRepository) updateHabitStats(ctx context.Context, habitID strin
 	return nil
 }
 
+// GetTransactionCountForHabit counts transactions linked to this habit for a given date
+func (r *PostgresRepository) GetTransactionCountForHabit(ctx context.Context, habitID string, dateKey string) (int, float64, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok || userID == "" {
+		return 0, 0, appErrors.InvalidToken
+	}
+
+	// Verify habit belongs to user
+	_, err := r.GetByID(ctx, habitID)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	var count int
+	var totalAmount float64
+
+	// Count transactions linked to this habit on the given date
+	err = r.db.GetContext(ctx, &count, `
+		SELECT COUNT(*) FROM transactions
+		WHERE habit_id = $1 AND user_id = $2 AND DATE(created_at) = $3 AND deleted_at IS NULL
+	`, habitID, userID, dateKey)
+	if err != nil {
+		return 0, 0, appErrors.DatabaseError
+	}
+
+	// Sum transaction amounts
+	r.db.GetContext(ctx, &totalAmount, `
+		SELECT COALESCE(SUM(amount), 0) FROM transactions
+		WHERE habit_id = $1 AND user_id = $2 AND DATE(created_at) = $3 AND deleted_at IS NULL
+	`, habitID, userID, dateKey)
+
+	return count, totalAmount, nil
+}
+
 type habitRow struct {
-	ID                  string         `db:"id"`
-	Title               string         `db:"title"`
-	Description         sql.NullString `db:"description"`
-	IconID              sql.NullString `db:"icon_id"`
-	HabitType           string         `db:"habit_type"`
-	Status              string         `db:"status"`
-	ShowStatus          string         `db:"show_status"`
-	GoalID              sql.NullString `db:"goal_id"`
-	Frequency           string         `db:"frequency"`
-	DaysOfWeek          pq.Int64Array  `db:"days_of_week"`
-	TimesPerWeek        sql.NullInt64  `db:"times_per_week"`
-	TimeOfDay           sql.NullString `db:"time_of_day"`
-	CompletionMode      string         `db:"completion_mode"`
+	ID                  string          `db:"id"`
+	Title               string          `db:"title"`
+	Description         sql.NullString  `db:"description"`
+	IconID              sql.NullString  `db:"icon_id"`
+	HabitType           string          `db:"habit_type"`
+	Status              string          `db:"status"`
+	ShowStatus          string          `db:"show_status"`
+	GoalID              sql.NullString  `db:"goal_id"`
+	Frequency           string          `db:"frequency"`
+	DaysOfWeek          pq.Int64Array   `db:"days_of_week"`
+	TimesPerWeek        sql.NullInt64   `db:"times_per_week"`
+	TimeOfDay           sql.NullString  `db:"time_of_day"`
+	CompletionMode      string          `db:"completion_mode"`
 	TargetPerDay        sql.NullFloat64 `db:"target_per_day"`
-	Unit                sql.NullString `db:"unit"`
-	CountingType        string         `db:"counting_type"`
-	Difficulty          string         `db:"difficulty"`
-	Priority            string         `db:"priority"`
-	ChallengeLengthDays sql.NullInt64  `db:"challenge_length_days"`
-	ReminderEnabled     bool           `db:"reminder_enabled"`
-	ReminderTime        sql.NullString `db:"reminder_time"`
-	StreakCurrent       int            `db:"streak_current"`
-	StreakBest          int            `db:"streak_best"`
-	CompletionRate30d   float64        `db:"completion_rate_30d"`
-	FinanceRule         []byte         `db:"finance_rule"`
-	CreatedAt           string         `db:"created_at"`
-	UpdatedAt           string         `db:"updated_at"`
+	Unit                sql.NullString  `db:"unit"`
+	CountingType        string          `db:"counting_type"`
+	Difficulty          string          `db:"difficulty"`
+	Priority            string          `db:"priority"`
+	ChallengeLengthDays sql.NullInt64   `db:"challenge_length_days"`
+	ReminderEnabled     bool            `db:"reminder_enabled"`
+	ReminderTime        sql.NullString  `db:"reminder_time"`
+	StreakCurrent       int             `db:"streak_current"`
+	StreakBest          int             `db:"streak_best"`
+	CompletionRate30d   float64         `db:"completion_rate_30d"`
+	FinanceRule         []byte          `db:"finance_rule"`
+	CreatedAt           string          `db:"created_at"`
+	UpdatedAt           string          `db:"updated_at"`
 }
 
 func mapRowToHabit(row habitRow) *Habit {

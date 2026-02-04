@@ -1,0 +1,47 @@
+databases:
+  - name: leora-postgres
+    plan: free
+    databaseName: leora
+    user: leora
+    region: oregon
+
+services:
+  - type: redis
+    name: leora-redis
+    plan: free
+    region: oregon
+    maxmemoryPolicy: allkeys-lru
+
+  - type: web
+    name: leora-server
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: PORT
+        fromRender: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: leora-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: leora-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: APPLE_BUNDLE_ID
+        value: com.sarvar.leora
+      - key: APPLE_TEAM_ID
+        value: QP47XLF76J
+      - key: APPLE_KEY_ID
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

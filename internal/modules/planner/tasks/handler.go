@@ -130,6 +130,26 @@ func (h *Handler) Delete(c *fiber.Ctx) error {
 	return response.Success(c, fiber.Map{"id": id, "status": "deleted"}, nil)
 }
 
+func (h *Handler) BulkDelete(c *fiber.Ctx) error {
+	var payload struct {
+		IDs []string `json:"ids"`
+	}
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Failure(c, appErrors.InvalidPlannerData)
+	}
+	if len(payload.IDs) == 0 {
+		return response.Failure(c, appErrors.InvalidPlannerData)
+	}
+	deleted, err := h.service.BulkDelete(c.Context(), payload.IDs)
+	if err != nil {
+		if typed, ok := err.(*appErrors.Error); ok {
+			return response.Failure(c, typed)
+		}
+		return response.Failure(c, appErrors.InternalServerError)
+	}
+	return response.Success(c, fiber.Map{"deleted": deleted, "ids": payload.IDs}, nil)
+}
+
 func (h *Handler) Complete(c *fiber.Ctx) error {
 	id := c.Params("id")
 	task, err := h.service.Complete(c.Context(), id)
@@ -182,4 +202,28 @@ func (h *Handler) UpdateChecklistItem(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.Map{"taskId": taskID, "itemId": itemID, "completed": payload.Completed}, nil)
+}
+
+// CheckFinanceTrigger auto-completes tasks based on financeLink type
+func (h *Handler) CheckFinanceTrigger(c *fiber.Ctx) error {
+	var payload struct {
+		FinanceLink string `json:"financeLink"`
+	}
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Failure(c, appErrors.InvalidPlannerData)
+	}
+
+	if payload.FinanceLink == "" {
+		return response.Failure(c, appErrors.InvalidPlannerData)
+	}
+
+	result, err := h.service.CheckFinanceTrigger(c.Context(), payload.FinanceLink)
+	if err != nil {
+		if typed, ok := err.(*appErrors.Error); ok {
+			return response.Failure(c, typed)
+		}
+		return response.Failure(c, appErrors.InternalServerError)
+	}
+
+	return response.Success(c, result, nil)
 }

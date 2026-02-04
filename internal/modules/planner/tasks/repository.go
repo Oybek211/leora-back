@@ -4,17 +4,17 @@ import "context"
 
 // ListOptions holds filtering and sorting options for task queries
 type ListOptions struct {
-	Status       string
-	ShowStatus   string
-	Priority     string
-	GoalID       string
-	HabitID      string
-	DueDate      string
-	DueDateFrom  string
-	DueDateTo    string
-	Search       string
-	SortBy       string
-	SortOrder    string
+	Status      string
+	ShowStatus  string
+	Priority    string
+	GoalID      string
+	HabitID     string
+	DueDate     string
+	DueDateFrom string
+	DueDateTo   string
+	Search      string
+	SortBy      string
+	SortOrder   string
 }
 
 // Repository defines the interface for task persistence
@@ -24,5 +24,8 @@ type Repository interface {
 	Create(ctx context.Context, task *Task) error
 	Update(ctx context.Context, task *Task) error
 	Delete(ctx context.Context, id string) error
+	BulkDelete(ctx context.Context, ids []string) (int64, error)
 	UpdateChecklistItem(ctx context.Context, taskID, itemID string, completed bool) error
+	// FindByFinanceLink returns pending tasks with matching financeLink
+	FindByFinanceLink(ctx context.Context, financeLink string) ([]*Task, error)
 }

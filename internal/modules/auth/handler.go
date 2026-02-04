@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/leora/leora-server/internal/common/response"
 	appErrors "github.com/leora/leora-server/internal/errors"
@@ -32,7 +34,8 @@ type loginRequest struct {
 }
 
 type refreshRequest struct {
-	RefreshToken string `json:"refreshToken"`
+	RefreshToken      string `json:"refreshToken"`
+	RefreshTokenSnake string `json:"refresh_token"`
 }
 
 type resetRequest struct {
@@ -85,15 +88,23 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 func (h *Handler) Refresh(c *fiber.Ctx) error {
 	var payload refreshRequest
 	if err := c.BodyParser(&payload); err != nil {
-		return response.Failure(c, appErrors.InvalidToken)
+		return response.Failure(c, appErrors.InvalidRefreshToken)
 	}
 
-	tokens, err := h.service.Refresh(c.Context(), payload.RefreshToken)
+	refreshToken := strings.TrimSpace(payload.RefreshToken)
+	if refreshToken == "" {
+		refreshToken = strings.TrimSpace(payload.RefreshTokenSnake)
+	}
+	if refreshToken == "" {
+		return response.Failure(c, appErrors.InvalidRefreshToken)
+	}
+
+	tokens, err := h.service.Refresh(c.Context(), refreshToken)
 	if err != nil {
 		if typed, ok := err.(*appErrors.Error); ok {
 			return response.Failure(c, typed)
 		}
-		return response.Failure(c, appErrors.InvalidToken)
+		return response.Failure(c, appErrors.InvalidRefreshToken)
 	}
 
 	return response.Success(c, fiber.Map{"accessToken": tokens.AccessToken, "refreshToken": tokens.RefreshToken, "expiresIn": tokens.ExpiresIn}, nil)
@@ -142,6 +153,74 @@ func (h *Handler) Logout(c *fiber.Ctx) error {
 		return response.Failure(c, appErrors.InternalServerError)
 	}
 	return response.Success(c, fiber.Map{"message": "logged out"}, nil)
+}
+
+type googleLoginRequest struct {
+	IDToken  string `json:"idToken"`
+	Region   string `json:"region"`
+	Currency string `json:"currency"`
+}
+
+func (h *Handler) GoogleLogin(c *fiber.Ctx) error {
+	var payload googleLoginRequest
+	if err := c.BodyParser(&payload); err != nil || strings.TrimSpace(payload.IDToken) == "" {
+		return response.Failure(c, appErrors.InvalidGoogleToken)
+	}
+
+	user, tokens, err := h.service.GoogleLogin(c.Context(), GoogleLoginPayload{
+		IDToken:  payload.IDToken,
+		Region:   payload.Region,
+		Currency: payload.Currency,
+	})
+	if err != nil {
+		if typed, ok := err.(*appErrors.Error); ok {
+			return response.Failure(c, typed)
+		}
+		return response.Failure(c, appErrors.InternalServerError)
+	}
+
+	return response.Success(c, fiber.Map{
+		"user":         user,
+		"accessToken":  tokens.AccessToken,
+		"refreshToken": tokens.RefreshToken,
+		"expiresIn":    tokens.ExpiresIn,
+	}, nil)
+}
+
+type appleLoginRequest struct {
+	IdentityToken string `json:"identityToken"`
+	Email         string `json:"email"`
+	FullName      string `json:"fullName"`
+	Region        string `json:"region"`
+	Currency      string `json:"currency"`
+}
+
+func (h *Handler) AppleLogin(c *fiber.Ctx) error {
+	var payload appleLoginRequest
+	if err := c.BodyParser(&payload); err != nil || strings.TrimSpace(payload.IdentityToken) == "" {
+		return response.Failure(c, appErrors.InvalidAppleToken)
+	}
+
+	user, tokens, err := h.service.AppleLogin(c.Context(), AppleLoginPayload{
+		IdentityToken: payload.IdentityToken,
+		Email:         payload.Email,
+		FullName:      payload.FullName,
+		Region:        payload.Region,
+		Currency:      payload.Currency,
+	})
+	if err != nil {
+		if typed, ok := err.(*appErrors.Error); ok {
+			return response.Failure(c, typed)
+		}
+		return response.Failure(c, appErrors.InternalServerError)
+	}
+
+	return response.Success(c, fiber.Map{
+		"user":         user,
+		"accessToken":  tokens.AccessToken,
+		"refreshToken": tokens.RefreshToken,
+		"expiresIn":    tokens.ExpiresIn,
+	}, nil)
 }
 
 func (h *Handler) Me(c *fiber.Ctx) error {

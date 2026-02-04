@@ -17,9 +17,13 @@ type Repository interface {
 	Create(ctx context.Context, habit *Habit) error
 	Update(ctx context.Context, habit *Habit) error
 	Delete(ctx context.Context, id string) error
+	BulkDelete(ctx context.Context, ids []string) (int64, error)
 	CreateCompletion(ctx context.Context, completion *HabitCompletion) error
 	GetCompletions(ctx context.Context, habitID string) ([]*HabitCompletion, error)
 	GetStats(ctx context.Context, habitID string) (*HabitStats, error)
+	ToggleCompletion(ctx context.Context, habitID, dateKey string) (*HabitCompletion, error)
+	// GetTransactionCountForHabit counts transactions linked to this habit today
+	GetTransactionCountForHabit(ctx context.Context, habitID string, dateKey string) (int, float64, error)
 }
 
 // InMemoryRepository stores habits in memory.
@@ -98,6 +102,23 @@ func (r *InMemoryRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+func (r *InMemoryRepository) BulkDelete(ctx context.Context, ids []string) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var count int64
+	now := utils.NowUTC()
+	for _, id := range ids {
+		habit, ok := r.items[id]
+		if ok && habit != nil && habit.DeletedAt == nil {
+			habit.DeletedAt = &now
+			habit.UpdatedAt = now
+			r.items[id] = habit
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (r *InMemoryRepository) CreateCompletion(ctx context.Context, completion *HabitCompletion) error {
 	// InMemory implementation - not used in production
 	return nil
@@ -111,6 +132,21 @@ func (r *InMemoryRepository) GetCompletions(ctx context.Context, habitID string)
 func (r *InMemoryRepository) GetStats(ctx context.Context, habitID string) (*HabitStats, error) {
 	// InMemory implementation - not used in production
 	return &HabitStats{}, nil
+}
+
+func (r *InMemoryRepository) ToggleCompletion(ctx context.Context, habitID, dateKey string) (*HabitCompletion, error) {
+	// InMemory implementation - not used in production
+	return &HabitCompletion{
+		ID:      uuid.NewString(),
+		HabitID: habitID,
+		DateKey: dateKey,
+		Status:  "done",
+	}, nil
+}
+
+func (r *InMemoryRepository) GetTransactionCountForHabit(ctx context.Context, habitID string, dateKey string) (int, float64, error) {
+	// InMemory implementation - not used in production
+	return 0, 0.0, nil
 }
 
 func cloneHabit(habit *Habit) *Habit {

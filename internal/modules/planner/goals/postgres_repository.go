@@ -9,6 +9,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/leora/leora-server/internal/common/utils"
 	appErrors "github.com/leora/leora-server/internal/errors"
+	plannerHabits "github.com/leora/leora-server/internal/modules/planner/habits"
+	plannerTasks "github.com/leora/leora-server/internal/modules/planner/tasks"
+	"github.com/lib/pq"
 )
 
 const goalSelectFields = `
@@ -25,6 +28,30 @@ type PostgresRepository struct {
 
 func NewPostgresRepository(db *sqlx.DB) *PostgresRepository {
 	return &PostgresRepository{db: db}
+}
+
+func (r *PostgresRepository) GetStats(ctx context.Context, goalID string) (*GoalStats, error) {
+	return r.getStats(ctx, goalID)
+}
+
+func (r *PostgresRepository) ListTasksByGoal(ctx context.Context, goalID string) ([]*TaskSummary, error) {
+	repo := plannerTasks.NewPostgresRepository(r.db)
+	return repo.List(ctx, plannerTasks.ListOptions{GoalID: goalID})
+}
+
+func (r *PostgresRepository) ListHabitsByGoal(ctx context.Context, goalID string) ([]*HabitSummary, error) {
+	repo := plannerHabits.NewPostgresRepository(r.db)
+	habits, err := repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	filtered := make([]*HabitSummary, 0, len(habits))
+	for _, habit := range habits {
+		if habit.GoalID != nil && *habit.GoalID == goalID {
+			filtered = append(filtered, habit)
+		}
+	}
+	return filtered, nil
 }
 
 func (r *PostgresRepository) List(ctx context.Context) ([]*Goal, error) {
@@ -166,6 +193,66 @@ func (r *PostgresRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// BulkDelete soft deletes multiple goals and unlinks any associated budgets/debts
+// Returns: (deletedCount, unlinkedBudgetIDs, unlinkedDebtIDs, error)
+func (r *PostgresRepository) BulkDelete(ctx context.Context, ids []string) (int64, []string, []string, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok || userID == "" {
+		return 0, nil, nil, appErrors.InvalidToken
+	}
+
+	if len(ids) == 0 {
+		return 0, nil, nil, nil
+	}
+
+	// First, get any linked budget/debt IDs for unlinking
+	var linkedBudgetIDs []string
+	var linkedDebtIDs []string
+	rows, err := r.db.QueryxContext(ctx, `
+		SELECT linked_budget_id, linked_debt_id
+		FROM goals
+		WHERE id = ANY($1) AND user_id = $2 AND deleted_at IS NULL
+	`, pq.Array(ids), userID)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var budgetID, debtID sql.NullString
+			rows.Scan(&budgetID, &debtID)
+			if budgetID.Valid && budgetID.String != "" {
+				linkedBudgetIDs = append(linkedBudgetIDs, budgetID.String)
+			}
+			if debtID.Valid && debtID.String != "" {
+				linkedDebtIDs = append(linkedDebtIDs, debtID.String)
+			}
+		}
+	}
+
+	now := utils.NowUTC()
+	// Soft delete the goals
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE goals
+		SET deleted_at = $1, updated_at = $2, show_status = 'deleted', linked_budget_id = NULL, linked_debt_id = NULL
+		WHERE id = ANY($3) AND user_id = $4 AND deleted_at IS NULL
+	`, now, now, pq.Array(ids), userID)
+	if err != nil {
+		return 0, nil, nil, appErrors.DatabaseError
+	}
+
+	deletedCount, _ := result.RowsAffected()
+
+	// Unlink budgets (keep budget data, just remove the link)
+	if len(linkedBudgetIDs) > 0 {
+		r.db.ExecContext(ctx, `UPDATE budgets SET linked_goal_id = NULL, updated_at = $1 WHERE id = ANY($2)`, now, pq.Array(linkedBudgetIDs))
+	}
+
+	// Unlink debts (keep debt data, just remove the link)
+	if len(linkedDebtIDs) > 0 {
+		r.db.ExecContext(ctx, `UPDATE debts SET linked_goal_id = NULL, updated_at = $1 WHERE id = ANY($2)`, now, pq.Array(linkedDebtIDs))
+	}
+
+	return deletedCount, linkedBudgetIDs, linkedDebtIDs, nil
+}
+
 func (r *PostgresRepository) CreateCheckIn(ctx context.Context, checkIn *CheckIn) error {
 	userID, ok := ctx.Value("user_id").(string)
 	if !ok || userID == "" {
@@ -264,7 +351,13 @@ func (r *PostgresRepository) saveMilestones(ctx context.Context, goalID string, 
 
 func (r *PostgresRepository) getStats(ctx context.Context, goalID string) (*GoalStats, error) {
 	var stats GoalStats
-	err := r.db.GetContext(ctx, &stats, `SELECT financial_progress_percent, habits_progress_percent, tasks_progress_percent, focus_minutes_last_30, updated_at FROM goal_stats WHERE goal_id=$1`, goalID)
+	err := r.db.GetContext(ctx, &stats, `
+		SELECT
+			COALESCE((SELECT COUNT(*) FROM tasks WHERE goal_id = $1 AND deleted_at IS NULL), 0) as total_tasks,
+			COALESCE((SELECT COUNT(*) FROM tasks WHERE goal_id = $1 AND status = 'completed' AND deleted_at IS NULL), 0) as completed_tasks,
+			COALESCE((SELECT COUNT(*) FROM habits WHERE goal_id = $1 AND deleted_at IS NULL), 0) as total_habits,
+			COALESCE((SELECT SUM(actual_minutes) FROM focus_sessions WHERE goal_id = $1 AND deleted_at IS NULL), 0) as focus_minutes
+	`, goalID)
 	if err != nil {
 		return nil, nil
 	}
@@ -272,29 +365,47 @@ func (r *PostgresRepository) getStats(ctx context.Context, goalID string) (*Goal
 }
 
 func (r *PostgresRepository) createStats(ctx context.Context, goalID string) error {
+	// deprecated: keep row to satisfy existing migrations, but stats are computed dynamically
 	r.db.ExecContext(ctx, `INSERT INTO goal_stats (goal_id, financial_progress_percent, habits_progress_percent, tasks_progress_percent, focus_minutes_last_30, updated_at) VALUES ($1,0,0,0,0,$2)`, goalID, utils.NowUTC())
 	return nil
 }
 
 func (r *PostgresRepository) updateGoalProgress(ctx context.Context, goalID string, addValue float64) error {
 	var g goalRow
-	err := r.db.GetContext(ctx, &g, `SELECT current_value, target_value, initial_value FROM goals WHERE id=$1`, goalID)
+	err := r.db.GetContext(ctx, &g, `SELECT current_value, target_value, initial_value, direction FROM goals WHERE id=$1`, goalID)
 	if err != nil {
 		return err
 	}
 
 	newCurrent := g.CurrentValue + addValue
 	newProgress := 0.0
-	if g.TargetValue.Valid && g.TargetValue.Float64 > 0 {
+
+	if g.TargetValue.Valid {
 		initial := 0.0
 		if g.InitialValue.Valid {
 			initial = g.InitialValue.Float64
 		}
-		if g.TargetValue.Float64 > initial {
-			newProgress = ((newCurrent - initial) / (g.TargetValue.Float64 - initial)) * 100
+		target := g.TargetValue.Float64
+
+		// Handle decrease direction (e.g., weight loss)
+		if g.Direction == "decrease" {
+			if initial != target {
+				newProgress = (initial - newCurrent) / (initial - target)
+			} else if newCurrent <= target {
+				newProgress = 1.0
+			}
+		} else {
+			// Default: increase direction
+			if target > initial {
+				newProgress = (newCurrent - initial) / (target - initial)
+			} else if newCurrent >= target {
+				newProgress = 1.0
+			}
 		}
-		if newProgress > 100 {
-			newProgress = 100
+
+		// Clamp between 0 and 1
+		if newProgress > 1 {
+			newProgress = 1
 		}
 		if newProgress < 0 {
 			newProgress = 0
@@ -331,6 +442,17 @@ type goalRow struct {
 	UpdatedAt           string          `db:"updated_at"`
 }
 
+// clampProgress ensures progress is between 0 and 1
+func clampProgress(p float64) float64 {
+	if p < 0 {
+		return 0
+	}
+	if p > 1 {
+		return 1
+	}
+	return p
+}
+
 func mapRowToGoal(row goalRow) *Goal {
 	goal := &Goal{
 		ID:              row.ID,
@@ -341,7 +463,7 @@ func mapRowToGoal(row goalRow) *Goal {
 		MetricType:      row.MetricType,
 		Direction:       row.Direction,
 		CurrentValue:    row.CurrentValue,
-		ProgressPercent: row.ProgressPercent,
+		ProgressPercent: clampProgress(row.ProgressPercent), // Clamp to 0-1 range
 		CreatedAt:       row.CreatedAt,
 		UpdatedAt:       row.UpdatedAt,
 	}
@@ -382,4 +504,75 @@ func mapRowToGoal(row goalRow) *Goal {
 		goal.CompletedDate = &row.CompletedDate.String
 	}
 	return goal
+}
+
+// UpdateBudgetGoalLink updates the linked_goal_id in the budgets table (bidirectional link)
+func (r *PostgresRepository) UpdateBudgetGoalLink(ctx context.Context, budgetID, goalID string) error {
+	var query string
+	var err error
+	if goalID == "" {
+		query = `UPDATE budgets SET linked_goal_id = NULL, updated_at = $1 WHERE id = $2 AND deleted_at IS NULL`
+		_, err = r.db.ExecContext(ctx, query, utils.NowUTC(), budgetID)
+	} else {
+		query = `UPDATE budgets SET linked_goal_id = $1, updated_at = $2 WHERE id = $3 AND deleted_at IS NULL`
+		_, err = r.db.ExecContext(ctx, query, goalID, utils.NowUTC(), budgetID)
+	}
+	return err
+}
+
+// UpdateDebtGoalLink updates the linked_goal_id in the debts table (bidirectional link)
+func (r *PostgresRepository) UpdateDebtGoalLink(ctx context.Context, debtID, goalID string) error {
+	var query string
+	var err error
+	if goalID == "" {
+		query = `UPDATE debts SET linked_goal_id = NULL, updated_at = $1 WHERE id = $2 AND deleted_at IS NULL`
+		_, err = r.db.ExecContext(ctx, query, utils.NowUTC(), debtID)
+	} else {
+		query = `UPDATE debts SET linked_goal_id = $1, updated_at = $2 WHERE id = $3 AND deleted_at IS NULL`
+		_, err = r.db.ExecContext(ctx, query, goalID, utils.NowUTC(), debtID)
+	}
+	return err
+}
+
+// GetBudgetProgress retrieves budget spending information for finance progress calculation
+func (r *PostgresRepository) GetBudgetProgress(ctx context.Context, budgetID string) (*BudgetProgress, error) {
+	var progress BudgetProgress
+	err := r.db.GetContext(ctx, &progress, `
+		SELECT
+			COALESCE(limit_amount, 0) as limit_amount,
+			COALESCE((
+				SELECT SUM(amount)
+				FROM transactions
+				WHERE budget_id = $1
+				AND type = 'expense'
+				AND deleted_at IS NULL
+			), 0) as spent_amount
+		FROM budgets
+		WHERE id = $1 AND deleted_at IS NULL
+	`, budgetID)
+	if err != nil {
+		return nil, err
+	}
+	return &progress, nil
+}
+
+// GetDebtProgress retrieves debt payment information for finance progress calculation
+func (r *PostgresRepository) GetDebtProgress(ctx context.Context, debtID string) (*DebtProgress, error) {
+	var progress DebtProgress
+	err := r.db.GetContext(ctx, &progress, `
+		SELECT
+			COALESCE(principal_amount, 0) as principal_amount,
+			COALESCE((
+				SELECT SUM(converted_amount_to_debt)
+				FROM debt_payments
+				WHERE debt_id = $1
+				AND deleted_at IS NULL
+			), 0) as paid_amount
+		FROM debts
+		WHERE id = $1 AND deleted_at IS NULL
+	`, debtID)
+	if err != nil {
+		return nil, err
+	}
+	return &progress, nil
 }
