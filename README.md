@@ -5,7 +5,7 @@ Go (Fiber v2) backend for the Leora app.
 ## Local Development
 
 ```bash
-# Start Postgres, Redis, and the backend
+# Stasafsafsafasfdrt Postgres, Redis, and the backend
 docker-compose up --build
 ```
 
