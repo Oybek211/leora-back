@@ -75,14 +75,10 @@ func (s *InMemoryTokenStore) BlacklistAccessToken(token string, expiresAt time.T
 	if token == "" {
 		return
 	}
-	tail := token
-	if len(tail) > 8 {
-		tail = tail[len(tail)-8:]
-	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.blacklist[token] = expiresAt
-	log.Printf("[tokenStore] BlacklistAccessToken: added ...%s (total blacklisted: %d)", tail, len(s.blacklist))
+	log.Printf("[tokenStore] BLACKLIST ADD len=%d tail=...%s total=%d", len(token), last8(token), len(s.blacklist))
 }
 
 func (s *InMemoryTokenStore) IsAccessTokenBlacklisted(token string) bool {
@@ -92,28 +88,25 @@ func (s *InMemoryTokenStore) IsAccessTokenBlacklisted(token string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	tail := token
-	if len(tail) > 8 {
-		tail = tail[len(tail)-8:]
-	}
-
-	if expiry, ok := s.blacklist[token]; ok {
-		if time.Now().After(expiry) {
-			delete(s.blacklist, token)
-			return false
+	expiry, ok := s.blacklist[token]
+	if !ok {
+		log.Printf("[tokenStore] CHECK len=%d tail=...%s → NOT in blacklist (size=%d)", len(token), last8(token), len(s.blacklist))
+		for bl := range s.blacklist {
+			log.Printf("[tokenStore]   entry: len=%d tail=...%s same=%v", len(bl), last8(bl), bl == token)
 		}
-		log.Printf("[tokenStore] token ...%s IS in blacklist (expires %v)", tail, expiry)
-		return true
+		return false
 	}
-
-	// Log all blacklisted tokens for debugging
-	for blToken := range s.blacklist {
-		blTail := blToken
-		if len(blTail) > 8 {
-			blTail = blTail[len(blTail)-8:]
-		}
-		log.Printf("[tokenStore] blacklist entry: ...%s (checked ...%s, match=%v)", blTail, tail, blToken == token)
+	if time.Now().After(expiry) {
+		delete(s.blacklist, token)
+		return false
 	}
+	log.Printf("[tokenStore] CHECK len=%d tail=...%s → BLACKLISTED", len(token), last8(token))
+	return true
+}
 
-	return false
+func last8(s string) string {
+	if len(s) > 8 {
+		return s[len(s)-8:]
+	}
+	return s
 }

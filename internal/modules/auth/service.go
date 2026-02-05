@@ -210,16 +210,8 @@ func (s *Service) ValidateAccessToken(token string) (*TokenClaims, error) {
 	}
 
 	claims, ok := parsed.Claims.(*TokenClaims)
-	if !ok {
-		log.Printf("[auth] token claims type invalid")
-		return nil, appErrors.InvalidToken
-	}
-	if err := claims.Valid(); err != nil {
-		if errors.Is(err, appErrors.TokenExpired) {
-			log.Printf("[auth] token claims expired: %v", err)
-			return nil, appErrors.TokenExpired
-		}
-		log.Printf("[auth] token claims invalid: %v", err)
+	if !ok || !parsed.Valid {
+		log.Printf("[auth] token claims type invalid or token not valid")
 		return nil, appErrors.InvalidToken
 	}
 	return claims, nil
